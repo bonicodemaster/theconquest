@@ -1,7 +1,9 @@
 import {
-  bad, emitState, getUserId, loadGameByCode, ok, parseBody, settingsSchema,
+  bad, getUserId, loadGameByCode, ok, parseBody, settingsSchema,
 } from "../../../_lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { broadcast } from "@/lib/realtime";
+import { leaderboardFrom, publicState, type GameRow } from "@/lib/gameLogic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,24 +32,35 @@ export async function PATCH(req: Request, ctx: { params: { code: string } }) {
   if (p.data.isPrivate !== undefined) patch.is_private = p.data.isPrivate;
   if (p.data.totalCountries !== undefined) patch.total_countries = p.data.totalCountries;
 
-  console.log("[settings] incoming patch:", p.data, "→ db patch:", patch);
+  if (Object.keys(patch).length === 0) return ok({ ok: true });
 
-  if (Object.keys(patch).length) {
-    const { data, error } = await supabaseAdmin()
-      .from("games")
-      .update(patch)
-      .eq("id", got.game.id)
-      .select("*");
-    console.log("[settings] update returned:", { error, data });
-    if (error) {
-      console.error("[settings] update games failed", error);
-      return bad(error.message, 500);
-    }
-    if (!data || data.length === 0) {
-      console.error("[settings] 0 rows updated");
-      return bad("Écriture bloquée par la base (clé service_role probablement incorrecte)", 500);
-    }
+  // Use RETURNING so we get the post-write row directly, avoiding read-replica
+  // lag (the cause of "settings revert" bugs in production).
+  const { data, error } = await supabaseAdmin()
+    .from("games")
+    .update(patch)
+    .eq("id", got.game.id)
+    .select("*");
+  if (error) {
+    console.error("[settings] update games failed", error);
+    return bad(error.message, 500);
   }
-  await emitState(ctx.params.code);
-  return ok({ ok: true });
+  if (!data || data.length === 0) {
+    console.error("[settings] 0 rows updated");
+    return bad("Écriture bloquée par la base", 500);
+  }
+
+  // Broadcast using the freshly-written row, NOT a re-read (which can hit a
+  // stale read replica).
+  const freshGame = data[0] as GameRow;
+  const state = publicState(freshGame, got.players, got.conquests);
+  const lb = leaderboardFrom(got.players, got.conquests, freshGame.mode);
+  await broadcast(supabaseAdmin(), ctx.params.code, [
+    { type: "state", payload: state },
+    { type: "leaderboard_updated", payload: lb },
+  ]);
+
+  // Return the fresh state in the PATCH response so the client can update
+  // immediately even before the broadcast or the next poll arrives.
+  return ok({ ok: true, state, leaderboard: lb });
 }

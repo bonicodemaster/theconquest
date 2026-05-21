@@ -5,6 +5,7 @@ import { supabaseBrowser } from "./supabase/client";
 import { channelName, type RoomEvent } from "./realtime";
 import { useGameStore } from "@/store/gameStore";
 import { api } from "./api";
+import { isInFreshWindow, markFresh } from "./stateClock";
 
 /**
  * Mount once per game-related page. Subscribes to the room's broadcast channel
@@ -22,6 +23,12 @@ export function useGameRealtime(code?: string) {
     let cancelled = false;
 
     const refetch = () => {
+      // If we just got a fresh write response or broadcast, don't risk
+      // overwriting it with a stale read from a Supabase replica.
+      if (isInFreshWindow()) {
+        console.log("[realtime] poll skipped (within fresh window)");
+        return;
+      }
       api.getState(code).then((r) => {
         if (cancelled) return;
         if (!r.ok) {
@@ -50,7 +57,11 @@ export function useGameRealtime(code?: string) {
       cb: (payload: Extract<RoomEvent, { type: T }>["payload"]) => void
     ) => ch.on("broadcast", { event: type }, ({ payload }) => cb(payload));
 
-    on("state", (s) => { console.log("[realtime] broadcast state →", s.settings); setState(s); });
+    on("state", (s) => {
+      console.log("[realtime] broadcast state →", s.settings);
+      markFresh();
+      setState(s);
+    });
     on("leaderboard_updated", (l) => setLb(l));
     on("chat_message", (m) => pushChat(m));
     on("country_conquered", (c) =>

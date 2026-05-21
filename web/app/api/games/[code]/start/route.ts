@@ -66,23 +66,18 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
   const now = new Date();
   const admin = supabaseAdmin();
 
+  // Build the update payload, then PATCH with RETURNING so we don't need
+  // a second read (which can hit a stale read replica).
+  let updatePayload: Record<string, unknown>;
   if (got.game.mode === "conquest") {
     const endsAt = new Date(now.getTime() + got.game.duration_sec * 1000);
-    const { data, error: uErr } = await admin.from("games")
-      .update({ status: "playing", started_at: now.toISOString(), ends_at: endsAt.toISOString() })
-      .eq("id", got.game.id)
-      .select("id");
-    if (uErr) { console.error("[start] update games failed", uErr); return bad(uErr.message, 500); }
-    if (!data || data.length === 0) {
-      console.error("[start] 0 rows updated — RLS likely blocking. Check SUPABASE_SERVICE_ROLE_KEY in Vercel env.");
-      return bad("Écriture bloquée par la base (clé service_role probablement incorrecte)", 500);
-    }
+    updatePayload = { status: "playing", started_at: now.toISOString(), ends_at: endsAt.toISOString() };
   } else {
     const total = Math.min(got.game.total_countries ?? 50, COUNTRIES.length);
     const deck = shuffle(COUNTRIES.map((c) => c.isoCode)).slice(0, total);
     const firstIso = deck[0];
     const endsAt = new Date(now.getTime() + got.game.duration_sec * 1000);
-    const { data, error: uErr } = await admin.from("games").update({
+    updatePayload = {
       status: "playing",
       started_at: now.toISOString(),
       total_rounds: total,
@@ -93,26 +88,31 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
       round_index: 0,
       mystery_winner_user_id: null,
       mystery_revealed_name: null,
-    }).eq("id", got.game.id).select("id");
-    if (uErr) { console.error("[start] update games failed", uErr); return bad(uErr.message, 500); }
-    if (!data || data.length === 0) {
-      console.error("[start] 0 rows updated — RLS likely blocking. Check SUPABASE_SERVICE_ROLE_KEY in Vercel env.");
-      return bad("Écriture bloquée par la base (clé service_role probablement incorrecte)", 500);
-    }
+    };
   }
 
-  // Fresh load + broadcast
-  const fresh = await loadGameByCode(ctx.params.code);
-  if (!fresh) return ok({ ok: true });
-  const state = publicState(fresh.game, fresh.players, fresh.conquests);
-  const lb = leaderboardFrom(fresh.players, fresh.conquests, fresh.game.mode);
+  const { data, error: uErr } = await admin
+    .from("games")
+    .update(updatePayload)
+    .eq("id", got.game.id)
+    .select("*");
+  if (uErr) { console.error("[start] update games failed", uErr); return bad(uErr.message, 500); }
+  if (!data || data.length === 0) {
+    console.error("[start] 0 rows updated");
+    return bad("Écriture bloquée par la base", 500);
+  }
+
+  // Use the row returned by the UPDATE, NOT a fresh read (avoids replica lag).
+  const freshGame = data[0] as typeof got.game;
+  const state = publicState(freshGame, got.players, got.conquests);
+  const lb = leaderboardFrom(got.players, got.conquests, freshGame.mode);
   await broadcast(admin, ctx.params.code, [
     { type: "game_started", payload: state },
     { type: "state", payload: state },
     { type: "leaderboard_updated", payload: lb },
-    ...(fresh.game.mode === "mystery" && state.round
+    ...(freshGame.mode === "mystery" && state.round
       ? [{ type: "mystery_new_round" as const, payload: state.round }]
       : []),
   ]);
-  return ok({ ok: true });
+  return ok({ ok: true, state, leaderboard: lb });
 }

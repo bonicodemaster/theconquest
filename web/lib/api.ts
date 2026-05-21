@@ -44,10 +44,13 @@ export const api = {
     call<{ ok: true }>(`/api/games/${code}/leave`, { method: "POST" }),
 
   updateSettings: (code: string, patch: any) =>
-    call<{ ok: true }>(`/api/games/${code}/settings`, { method: "PATCH", body: JSON.stringify(patch) }),
+    call<{ ok: true; state?: any; leaderboard?: any }>(`/api/games/${code}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
 
   startGame: (code: string) =>
-    call<{ ok: true }>(`/api/games/${code}/start`, { method: "POST" }),
+    call<{ ok: true; state?: any; leaderboard?: any }>(`/api/games/${code}/start`, { method: "POST" }),
 
   submitGuess: (code: string, guess: string) =>
     call<{ matched: boolean; isoCode?: string }>(`/api/games/${code}/guess`, {

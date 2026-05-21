@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { getUserId } from "@/lib/identity";
 import { useGameRealtime } from "@/lib/useGameRealtime";
+import { markFresh } from "@/lib/stateClock";
 import { useGameStore } from "@/store/gameStore";
 import Chat from "@/components/Chat";
 import type { Difficulty, GameMode, GameSettings } from "@/types/shared";
@@ -13,6 +14,8 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const { code } = params;
   const router = useRouter();
   const state = useGameStore((s) => s.state);
+  const setState = useGameStore((s) => s.setState);
+  const setLb = useGameStore((s) => s.setLeaderboard);
 
   useGameRealtime(code);
 
@@ -100,6 +103,12 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     });
     const res = await api.updateSettings(code, patch);
     console.log("[lobby] PATCH response", res);
+    if (res.ok && res.data.state) {
+      // Use the authoritative state returned by the write (no replica-lag risk)
+      markFresh();
+      setState(res.data.state);
+      if (res.data.leaderboard) setLb(res.data.leaderboard);
+    }
     if (!res.ok) {
       console.error("[lobby] update rejected:", res.error);
       setOptimistic((prev) => {
@@ -121,6 +130,11 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     setStarting(true);
     const res = await api.startGame(code);
     if (res.ok) {
+      if (res.data.state) {
+        markFresh();
+        setState(res.data.state);
+        if (res.data.leaderboard) setLb(res.data.leaderboard);
+      }
       router.push(`/game/${code}`);
       return;
     }
