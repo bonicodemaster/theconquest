@@ -1,0 +1,23 @@
+{
+  "name": "theconquest-io",
+  "version": "1.0.0",
+  "private": true,
+  "description": "World Conquest Quiz — real-time multiplayer geography game",
+  "workspaces": ["web", "server"],
+  "scripts": {
+    "dev": "concurrently -k -n web,server -c blue,green \"npm:dev:web\" \"npm:dev:server\"",
+    "dev:web": "npm --workspace web run dev",
+    "dev:server": "npm --workspace server run dev",
+    "build": "npm --workspace server run build && npm --workspace web run build",
+    "start": "concurrently -k -n web,server -c blue,green \"npm --workspace web run start\" \"npm --workspace server run start\"",
+    "lint": "npm --workspace web run lint",
+    "prisma:generate": "npm --workspace server run prisma:generate",
+    "prisma:migrate": "npm --workspace server run prisma:migrate"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

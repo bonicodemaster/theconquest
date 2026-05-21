@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #06070a;
+  --bg-soft: #0b0d12;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+html, body { background: var(--bg); color: #e6e8ee; }
+body { font-family: var(--font-body), system-ui, sans-serif; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.18); }
+
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-semibold
+         transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-primary { @apply btn bg-brand-500 hover:bg-brand-400 text-white shadow-glow; }
+.btn-ghost   { @apply btn bg-white/5 hover:bg-white/10 text-white border border-white/10; }
+.btn-danger  { @apply btn bg-red-500/90 hover:bg-red-500 text-white; }
+
+.input {
+  @apply w-full px-4 py-2 rounded-xl bg-ink-800 border border-white/10
+         focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 outline-none
+         placeholder:text-white/30 text-white;
+}
+
+.label { @apply text-xs uppercase tracking-wider text-white/50 font-medium; }

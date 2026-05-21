@@ -1,0 +1,101 @@
+// Optional persistence. Live gameplay is in-memory by design (low latency).
+// Use this schema to persist match history, ELO, and country metadata.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  avatar    String?
+  elo       Int      @default(1000)
+  createdAt DateTime @default(now())
+
+  players  GamePlayer[]
+  wonGames Game[]       @relation("Winner")
+}
+
+enum GameMode {
+  conquest
+  mystery
+}
+
+enum GameStatus {
+  lobby
+  playing
+  finished
+}
+
+model Game {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  mode      GameMode
+  status    GameStatus @default(lobby)
+  settings  Json
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime   @default(now())
+
+  winnerId String?
+  winner   User?   @relation("Winner", fields: [winnerId], references: [id])
+
+  players   GamePlayer[]
+  conquests Conquest[]
+  history   MatchHistory?
+}
+
+model GamePlayer {
+  id       String  @id @default(cuid())
+  userId   String
+  gameId   String
+  score    Int     @default(0)
+  color    String
+  ready    Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id])
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@unique([gameId, userId])
+}
+
+model Country {
+  isoCode      String   @id // ISO-3166-1 alpha-2
+  name         String
+  officialName String
+  aliases      String[]
+  areaKm2      Int
+  continent    String
+  capital      String
+  svgPathId    String?
+
+  conquests Conquest[]
+}
+
+model Conquest {
+  id          String   @id @default(cuid())
+  gameId      String
+  countryId   String
+  playerId    String   // GamePlayer.id
+  conqueredAt DateTime @default(now())
+
+  game    Game    @relation(fields: [gameId], references: [id])
+  country Country @relation(fields: [countryId], references: [isoCode])
+
+  @@unique([gameId, countryId])
+}
+
+model MatchHistory {
+  id       String   @id @default(cuid())
+  gameId   String   @unique
+  stats    Json
+  winnerId String?
+  createdAt DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id])
+}
