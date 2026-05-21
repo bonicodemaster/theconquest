@@ -67,23 +67,27 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const updateSettings = async (patch: Partial<GameSettings>) => {
     setOptimistic((prev) => ({ ...prev, ...patch }));
     const res = await api.updateSettings(code, patch);
-    if (!res.ok) {
-      // Server rejected — drop the optimistic value so the UI snaps back to truth
+    const cleanup = () =>
       setOptimistic((prev) => {
         const next = { ...prev };
         for (const k of Object.keys(patch)) delete (next as any)[k];
         return next;
       });
+
+    if (!res.ok) {
       console.error("[settings] update rejected:", res.error);
+      cleanup();
+      // If the game has already moved past lobby, force a fresh state lookup
+      // so the auto-redirect can send us to /game or /results.
+      if (res.error && res.error.toLowerCase().includes("démarrée")) {
+        const cur = await api.getState(code);
+        if (cur.ok) {
+          if (cur.data.state.status === "playing") router.push(`/game/${code}`);
+          else if (cur.data.state.status === "finished") router.push(`/results/${code}`);
+        }
+      }
     } else {
-      // Clear once the broadcast/poll has caught up
-      setTimeout(() => {
-        setOptimistic((prev) => {
-          const next = { ...prev };
-          for (const k of Object.keys(patch)) delete (next as any)[k];
-          return next;
-        });
-      }, 1500);
+      setTimeout(cleanup, 1500);
     }
   };
 
@@ -92,12 +96,22 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     setStartError(null);
     setStarting(true);
     const res = await api.startGame(code);
-    if (res.ok) router.push(`/game/${code}`);
-    else {
-      console.error("[start] rejected:", res.error);
-      setStartError(res.error);
-      setStarting(false);
+    if (res.ok) {
+      router.push(`/game/${code}`);
+      return;
     }
+    // The game might already be running (e.g. previous start succeeded but
+    // the broadcast was missed). Fall back to a fresh state lookup and route
+    // based on the real status.
+    console.warn("[start] rejected, checking real status:", res.error);
+    const cur = await api.getState(code);
+    if (cur.ok) {
+      const status = cur.data.state.status;
+      if (status === "playing") { router.push(`/game/${code}`); return; }
+      if (status === "finished") { router.push(`/results/${code}`); return; }
+    }
+    setStartError(res.error);
+    setStarting(false);
   };
   const leave = async () => {
     router.push("/");                            // optimistic — don't wait for the API
