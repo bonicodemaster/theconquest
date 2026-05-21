@@ -1,7 +1,9 @@
 import { COUNTRIES } from "@/lib/countries";
 import { nameFr, continentFr } from "@/lib/countriesFr";
 
-export const runtime = "edge";
+// Pure, input-free GET → let Next statically generate it at build time and
+// serve from the CDN. (Edge runtime would disable that static generation.)
+export const dynamic = "force-static";
 
 export async function GET() {
   return Response.json(
