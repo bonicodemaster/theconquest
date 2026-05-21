@@ -16,11 +16,10 @@ export async function PATCH(req: Request, ctx: { params: { code: string } }) {
   const got = await loadGameByCode(ctx.params.code);
   if (!got) return bad("Partie introuvable", 404);
   if (got.game.host_user_id !== userId) return bad("Seul l'hôte peut changer les paramètres", 403);
-  // If the game already moved past lobby, return ok + current state so the
-  // client re-renders / auto-redirects instead of being stuck on an error.
+  // If the game already moved past lobby, surface the actual status so the
+  // client can route to /game or /results instead of being stuck.
   if (got.game.status !== "lobby") {
-    await emitState(ctx.params.code);
-    return ok({ ok: true, status: got.game.status });
+    return bad(got.game.status === "playing" ? "Partie déjà démarrée" : "Partie terminée", 409);
   }
 
   const patch: Record<string, unknown> = {};

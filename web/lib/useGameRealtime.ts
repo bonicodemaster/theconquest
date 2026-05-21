@@ -33,7 +33,7 @@ export function useGameRealtime(code?: string) {
     refetch();
 
     // 1b) Safety-net poll: catches missed broadcasts in serverless environments
-    const pollId = setInterval(refetch, 2500);
+    const pollId = setInterval(refetch, 1500);
 
     // 2) Subscribe to live channel
     const ch = supabaseBrowser().channel(channelName(code), {

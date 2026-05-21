@@ -5,6 +5,9 @@ async function call<T>(
   url: string,
   init?: RequestInit
 ): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  // Hard 8-second timeout so the UI is never stuck waiting on a hung Lambda.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, {
       ...init,
@@ -14,12 +17,16 @@ async function call<T>(
         ...(init?.headers ?? {}),
       },
       cache: "no-store",
+      signal: controller.signal,
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: json?.error ?? `HTTP ${res.status}` };
     return { ok: true, data: json as T };
   } catch (e: any) {
-    return { ok: false, error: e?.message ?? "Network error" };
+    if (e?.name === "AbortError") return { ok: false, error: "Délai dépassé" };
+    return { ok: false, error: e?.message ?? "Erreur réseau" };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

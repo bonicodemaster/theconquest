@@ -3,6 +3,11 @@
  * One channel per game room: `game:<CODE>`.
  *
  * Events mirror the original Socket.io contract.
+ *
+ * IMPORTANT in serverless: broadcast() always resolves within ~700ms even
+ * if Supabase's WebSocket handshake fails. We deliberately do NOT block the
+ * API response on a successful broadcast — the client also polls every
+ * 1.5s as a safety net, so missed broadcasts are harmless.
  */
 import { createClient } from "@supabase/supabase-js";
 import type {
@@ -28,16 +33,8 @@ export type RoomEvent =
 
 export const channelName = (code: string) => `game:${code.toUpperCase()}`;
 
-/**
- * Server-side broadcast helper.
- * Uses Supabase Realtime via a short-lived WebSocket: opens channel,
- * subscribes, sends all events, unsubscribes. This is the only
- * delivery mechanism guaranteed to reach existing subscribers, because
- * the supabase-js client subscribes on internal topic "realtime:<name>".
- *
- * The (unused) first arg is kept for API compatibility with callers that
- * still pass `supabaseAdmin()`.
- */
+const SUBSCRIBE_TIMEOUT_MS = 700;
+
 export async function broadcast(
   _client: unknown,
   code: string,
@@ -50,8 +47,7 @@ export async function broadcast(
     console.error("[broadcast] Supabase env missing");
     return;
   }
-  // A short-lived client per call. Realtime needs a persistent socket to
-  // subscribe, and we want to tear it down so the serverless function exits.
+
   const c = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
     realtime: { params: { eventsPerSecond: 50 } },
@@ -59,23 +55,39 @@ export async function broadcast(
   const ch = c.channel(channelName(code), {
     config: { broadcast: { self: true, ack: false } },
   });
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     await new Promise<void>((resolve) => {
-      const timeout = setTimeout(() => {
-        console.error("[broadcast] subscribe timeout");
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        if (timer) clearTimeout(timer);
         resolve();
-      }, 4000);
+      };
+      timer = setTimeout(() => {
+        console.warn("[broadcast] subscribe timeout, abandoning");
+        finish();
+      }, SUBSCRIBE_TIMEOUT_MS);
       ch.subscribe(async (status) => {
+        if (done) return;
         if (status !== "SUBSCRIBED") return;
-        clearTimeout(timeout);
-        for (const e of events) {
-          await ch.send({ type: "broadcast", event: e.type, payload: e.payload });
+        try {
+          for (const e of events) {
+            await ch.send({ type: "broadcast", event: e.type, payload: e.payload });
+          }
+        } catch (err) {
+          console.error("[broadcast] send error", err);
         }
-        resolve();
+        finish();
       });
     });
   } finally {
-    try { await ch.unsubscribe(); } catch {}
-    try { await c.removeAllChannels(); } catch {}
+    // Always tear down — never block the response on cleanup
+    void (async () => {
+      try { await ch.unsubscribe(); } catch {}
+      try { await c.removeAllChannels(); } catch {}
+    })();
   }
 }

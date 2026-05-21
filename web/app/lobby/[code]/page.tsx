@@ -26,8 +26,11 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const [optimistic, setOptimistic] = useState<Partial<GameSettings>>({});
 
   // If the user landed here directly, attempt to join.
+  // Only try to join while the game is still in lobby — once it's playing,
+  // the auto-redirect effect below will move us to /game.
   useEffect(() => {
     if (!username) { router.replace("/"); return; }
+    if (state && state.status !== "lobby") return;
     let cancelled = false;
     (async () => {
       const me = state?.players.find((p) => p.userId === getUserId());
@@ -37,6 +40,24 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     })();
     return () => { cancelled = true; };
   }, [code, state, username, router]);
+
+  // Clear optimistic settings as soon as the server state catches up to them.
+  useEffect(() => {
+    if (!state) return;
+    setOptimistic((prev) => {
+      const keys = Object.keys(prev) as Array<keyof GameSettings>;
+      if (keys.length === 0) return prev;
+      const next = { ...prev };
+      let changed = false;
+      for (const k of keys) {
+        if ((state.settings as any)[k] === (prev as any)[k]) {
+          delete (next as any)[k];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [state]);
 
   // Auto-route based on server status (covers missed broadcasts)
   useEffect(() => {
@@ -65,29 +86,25 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const settings: GameSettings = { ...state.settings, ...optimistic };
 
   const updateSettings = async (patch: Partial<GameSettings>) => {
+    // Apply locally for instant feedback. The dedicated useEffect above will
+    // clear each key as soon as the server state reflects it (broadcast OR
+    // poll, whichever wins).
     setOptimistic((prev) => ({ ...prev, ...patch }));
     const res = await api.updateSettings(code, patch);
-    const cleanup = () =>
+    if (!res.ok) {
+      console.error("[settings] update rejected:", res.error);
+      // Drop optimistic so the UI snaps back to the truth
       setOptimistic((prev) => {
         const next = { ...prev };
         for (const k of Object.keys(patch)) delete (next as any)[k];
         return next;
       });
-
-    if (!res.ok) {
-      console.error("[settings] update rejected:", res.error);
-      cleanup();
-      // If the game has already moved past lobby, force a fresh state lookup
-      // so the auto-redirect can send us to /game or /results.
-      if (res.error && res.error.toLowerCase().includes("démarrée")) {
-        const cur = await api.getState(code);
-        if (cur.ok) {
-          if (cur.data.state.status === "playing") router.push(`/game/${code}`);
-          else if (cur.data.state.status === "finished") router.push(`/results/${code}`);
-        }
+      // If the game moved past lobby, route accordingly
+      const cur = await api.getState(code);
+      if (cur.ok) {
+        if (cur.data.state.status === "playing") router.push(`/game/${code}`);
+        else if (cur.data.state.status === "finished") router.push(`/results/${code}`);
       }
-    } else {
-      setTimeout(cleanup, 1500);
     }
   };
 
