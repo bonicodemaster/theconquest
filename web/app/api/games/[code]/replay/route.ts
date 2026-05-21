@@ -1,7 +1,8 @@
-import { bad, dynamic, emitState, getUserId, loadGameByCode, ok, runtime } from "../../../_lib";
+import { bad, emitState, getUserId, loadGameByCode, ok } from "../../../_lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-export { runtime, dynamic };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, ctx: { params: { code: string } }) {
   const userId = getUserId(req);

@@ -1,9 +1,10 @@
 import {
-  bad, dynamic, emitState, getUserId, loadGameByCode, ok, parseBody, runtime, settingsSchema,
+  bad, emitState, getUserId, loadGameByCode, ok, parseBody, settingsSchema,
 } from "../../../_lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-export { runtime, dynamic };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request, ctx: { params: { code: string } }) {
   const userId = getUserId(req);

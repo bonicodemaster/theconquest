@@ -1,11 +1,12 @@
 import { z } from "zod";
 import {
-  bad, dynamic, getUserId, loadGameByCode, ok, parseBody, rateLimit, runtime,
+  bad, getUserId, loadGameByCode, ok, parseBody, rateLimit,
 } from "../../../_lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { broadcast } from "@/lib/realtime";
 
-export { runtime, dynamic };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const schema = z.object({ text: z.string().trim().min(1).max(280) });
 

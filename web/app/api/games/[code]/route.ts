@@ -1,7 +1,8 @@
-import { bad, dynamic, loadGameByCode, ok, runtime } from "../../_lib";
+import { bad, loadGameByCode, ok } from "../../_lib";
 import { leaderboardFrom, publicState } from "@/lib/gameLogic";
 
-export { runtime, dynamic };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, ctx: { params: { code: string } }) {
   const got = await loadGameByCode(ctx.params.code);

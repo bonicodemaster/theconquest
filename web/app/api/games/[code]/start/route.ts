@@ -1,12 +1,13 @@
 import {
-  bad, dynamic, getUserId, loadGameByCode, ok, runtime,
+  bad, getUserId, loadGameByCode, ok,
 } from "../../../_lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { broadcast } from "@/lib/realtime";
 import { leaderboardFrom, publicState } from "@/lib/gameLogic";
 import { COUNTRIES } from "@/lib/countries";
 
-export { runtime, dynamic };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = arr.slice();

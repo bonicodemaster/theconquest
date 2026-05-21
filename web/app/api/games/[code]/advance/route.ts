@@ -1,12 +1,13 @@
 import {
-  bad, dynamic, loadGameByCode, ok, runtime,
+  bad, loadGameByCode, ok,
 } from "../../../_lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { broadcast } from "@/lib/realtime";
 import { leaderboardFrom, publicState } from "@/lib/gameLogic";
 import { BY_ISO } from "@/lib/countries";
 
-export { runtime, dynamic };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * Idempotent transition endpoint. Called by clients when they notice the

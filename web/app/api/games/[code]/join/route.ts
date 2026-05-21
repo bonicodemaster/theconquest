@@ -1,11 +1,12 @@
 import { z } from "zod";
 import {
-  bad, dynamic, emitState, getUserId, loadGameByCode, ok, parseBody, runtime, usernameSchema,
+  bad, emitState, getUserId, loadGameByCode, ok, parseBody, usernameSchema,
 } from "../../../_lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { PLAYER_COLORS } from "@/lib/codeGen";
 
-export { runtime, dynamic };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const schema = z.object({ username: usernameSchema });
 

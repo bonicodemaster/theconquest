@@ -31,6 +31,7 @@ export interface GameRow {
   round_index: number;
   total_rounds: number | null;
   mystery_iso: string | null;
+  mystery_deck: string[] | null;
   mystery_winner_user_id: string | null;
   mystery_revealed_name: string | null;
   mystery_round_started_at: string | null;
