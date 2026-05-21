@@ -8,12 +8,18 @@ import { broadcast, type RoomEvent } from "@/lib/realtime";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+  "CDN-Cache-Control": "no-store",
+  "Vercel-CDN-Cache-Control": "no-store",
+};
+
 export function bad(error: string, status = 400) {
-  return NextResponse.json({ error }, { status });
+  return NextResponse.json({ error }, { status, headers: NO_CACHE_HEADERS });
 }
 
 export function ok<T extends object>(data: T = {} as T) {
-  return NextResponse.json(data);
+  return NextResponse.json(data, { headers: NO_CACHE_HEADERS });
 }
 
 export function getUserId(req: Request): string | null {

@@ -8,8 +8,11 @@ async function call<T>(
   // Hard 8-second timeout so the UI is never stuck waiting on a hung Lambda.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
+  // Cache buster: ensure no intermediate proxy (browser, CDN) ever
+  // serves a stale response for a GET.
+  const bustedUrl = url + (url.includes("?") ? "&" : "?") + "_=" + Date.now();
   try {
-    const res = await fetch(url, {
+    const res = await fetch(bustedUrl, {
       ...init,
       headers: {
         "Content-Type": "application/json",
