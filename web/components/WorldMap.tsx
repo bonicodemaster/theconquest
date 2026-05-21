@@ -103,12 +103,12 @@ export default function WorldMap({ countries, highlightIso, interactive = true }
         </ZoomableGroup>
       </ComposableMap>
 
-      {/* Hover tooltip — never reveals the country name during active play */}
+      {/* Hover tooltip — never reveals the country name unless conquered or game is finished */}
       <AnimatePresence>
         {hover && (() => {
           const conqueredColor = colorByIso.get(hover.meta.isoCode);
           const conquered = !!conqueredColor;
-          const reveal = state?.status !== "playing" || conquered;
+          const reveal = state?.status === "finished" || conquered;
           return (
             <motion.div
               key={hover.meta.isoCode}

@@ -32,6 +32,13 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     return () => { cancelled = true; };
   }, [code, state, username, router]);
 
+  // Auto-route based on server status (covers missed broadcasts)
+  useEffect(() => {
+    if (!state) return;
+    if (state.status === "playing") router.replace(`/game/${code}`);
+    else if (state.status === "finished") router.replace(`/results/${code}`);
+  }, [state, code, router]);
+
   if (joinError) {
     return (
       <main className="min-h-screen flex items-center justify-center">

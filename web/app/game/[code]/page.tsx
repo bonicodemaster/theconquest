@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Leaderboard from "@/components/Leaderboard";
 import Timer from "@/components/Timer";
@@ -25,6 +26,7 @@ interface CountryMeta {
 
 export default function GamePage({ params }: { params: { code: string } }) {
   const { code } = params;
+  const router = useRouter();
   useGameRealtime(code);
 
   const state = useGameStore((s) => s.state);
@@ -34,6 +36,13 @@ export default function GamePage({ params }: { params: { code: string } }) {
   useEffect(() => {
     fetch("/api/countries").then((r) => r.json()).then(setCountries).catch(() => {});
   }, []);
+
+  // Auto-route based on server status (covers missed broadcasts)
+  useEffect(() => {
+    if (!state) return;
+    if (state.status === "lobby") router.replace(`/lobby/${code}`);
+    else if (state.status === "finished") router.replace(`/results/${code}`);
+  }, [state, code, router]);
 
   // Client-driven timer transition: when the current round/game ends, ask the server to advance.
   useEffect(() => {

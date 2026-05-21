@@ -21,12 +21,19 @@ export function useGameRealtime(code?: string) {
     if (!code) return;
     let cancelled = false;
 
+    const refetch = () => {
+      api.getState(code).then((r) => {
+        if (cancelled || !r.ok) return;
+        setState(r.data.state);
+        setLb(r.data.leaderboard);
+      });
+    };
+
     // 1) Initial snapshot
-    api.getState(code).then((r) => {
-      if (cancelled || !r.ok) return;
-      setState(r.data.state);
-      setLb(r.data.leaderboard);
-    });
+    refetch();
+
+    // 1b) Safety-net poll: catches missed broadcasts in serverless environments
+    const pollId = setInterval(refetch, 4000);
 
     // 2) Subscribe to live channel
     const ch = supabaseBrowser().channel(channelName(code), {
@@ -59,6 +66,7 @@ export function useGameRealtime(code?: string) {
 
     return () => {
       cancelled = true;
+      clearInterval(pollId);
       supabaseBrowser().removeChannel(ch);
     };
   }, [code, router, setState, setLb, pushChat, setLast]);
