@@ -20,6 +20,10 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
 
+  // Optimistic settings: applied locally on click, cleared once the server
+  // confirms (the next state broadcast/poll matches the optimistic value).
+  const [optimistic, setOptimistic] = useState<Partial<GameSettings>>({});
+
   // If the user landed here directly, attempt to join.
   useEffect(() => {
     if (!username) { router.replace("/"); return; }
@@ -56,10 +60,30 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const myUserId = getUserId();
   const me = state.players.find((p) => p.userId === myUserId);
   const isHost = me?.userId === state.hostId;
-  const settings = state.settings;
+  // Merge server state with any in-flight optimistic edits
+  const settings: GameSettings = { ...state.settings, ...optimistic };
 
-  const updateSettings = (patch: Partial<GameSettings>) => {
-    void api.updateSettings(code, patch);
+  const updateSettings = async (patch: Partial<GameSettings>) => {
+    setOptimistic((prev) => ({ ...prev, ...patch }));
+    const res = await api.updateSettings(code, patch);
+    if (!res.ok) {
+      // Server rejected — drop the optimistic value so the UI snaps back to truth
+      setOptimistic((prev) => {
+        const next = { ...prev };
+        for (const k of Object.keys(patch)) delete (next as any)[k];
+        return next;
+      });
+      console.error("[settings] update rejected:", res.error);
+    } else {
+      // Clear once the broadcast/poll has caught up
+      setTimeout(() => {
+        setOptimistic((prev) => {
+          const next = { ...prev };
+          for (const k of Object.keys(patch)) delete (next as any)[k];
+          return next;
+        });
+      }, 1500);
+    }
   };
 
   const start = async () => {

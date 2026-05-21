@@ -55,7 +55,7 @@ export async function broadcast(
   }
   const topic = channelName(code);
   try {
-    await fetch(`${url}/realtime/v1/api/broadcast`, {
+    const res = await fetch(`${url}/realtime/v1/api/broadcast`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -70,10 +70,12 @@ export async function broadcast(
           private: false,
         })),
       }),
-      // Don't block the response on the network call too long
-      // (Supabase replies quickly but we shouldn't be held up if not).
       cache: "no-store",
     });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("[broadcast] non-200", res.status, body);
+    }
   } catch (err) {
     console.error("[broadcast] HTTP send failed", err);
   }
