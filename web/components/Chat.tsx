@@ -25,7 +25,7 @@ export default function Chat() {
 
   return (
     <div className="glass rounded-2xl flex flex-col min-h-0 overflow-hidden">
-      <div className="px-4 py-2 label border-b border-white/5">Chat</div>
+      <div className="px-4 py-2 label border-b border-white/5">Discussion</div>
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 text-sm">
         {messages.map((m) => (
           <div key={m.id} className="leading-snug">
@@ -43,7 +43,7 @@ export default function Chat() {
           onChange={(e) => setText(e.target.value)}
           className="input"
           maxLength={280}
-          placeholder="Say something…"
+          placeholder="Écris un message…"
         />
       </form>
     </div>

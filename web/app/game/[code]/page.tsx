@@ -62,7 +62,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
   if (!state) {
     return (
       <main className="min-h-screen flex items-center justify-center text-white/40">
-        Loading game…
+        Chargement de la partie…
       </main>
     );
   }
@@ -73,14 +73,14 @@ export default function GamePage({ params }: { params: { code: string } }) {
     <main className="h-screen overflow-hidden flex flex-col p-3 md:p-4 gap-3">
       <header className="flex items-center justify-between gap-3 shrink-0">
         <div>
-          <div className="label">Room</div>
+          <div className="label">Salon</div>
           <div className="font-display text-xl font-bold tracking-wider">{state.code}</div>
         </div>
         <Timer endsAt={mode === "conquest" ? state.endsAt : state.round?.endsAt} />
         <div className="text-right text-xs text-white/40 hidden md:block">
           {mode === "conquest"
-            ? `${state.conquered.length} / ${countries.length || 196} conquered`
-            : `Round ${(state.roundsPlayed ?? 0) + 1} / ${state.totalRounds ?? "—"}`}
+            ? `${state.conquered.length} / ${countries.length || 196} pays conquis`
+            : `Manche ${(state.roundsPlayed ?? 0) + 1} / ${state.totalRounds ?? "—"}`}
         </div>
       </header>
 
@@ -103,7 +103,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
                 exit={{ opacity: 0 }}
                 className="glass rounded-2xl p-3 text-center"
               >
-                <span className="text-white/60 text-xs uppercase tracking-wider">Answer:</span>{" "}
+                <span className="text-white/60 text-xs uppercase tracking-wider">Réponse :</span>{" "}
                 <span className="font-display text-xl font-bold">{state.round.revealedName}</span>
               </motion.div>
             </AnimatePresence>

@@ -15,18 +15,18 @@ const schema = z.object({ guess: z.string().trim().min(1).max(60) });
 
 export async function POST(req: Request, ctx: { params: { code: string } }) {
   const userId = getUserId(req);
-  if (!userId) return bad("Missing user id", 401);
-  if (!rateLimit(userId, "guess", 8)) return bad("Slow down", 429);
+  if (!userId) return bad("Identifiant utilisateur manquant", 401);
+  if (!rateLimit(userId, "guess", 8)) return bad("Trop rapide", 429);
 
   const p = await parseBody(req, schema);
   if (!p.ok) return p.res;
 
   const got = await loadGameByCode(ctx.params.code);
-  if (!got) return bad("Game not found", 404);
-  if (got.game.status !== "playing") return bad("Not playing", 409);
+  if (!got) return bad("Partie introuvable", 404);
+  if (got.game.status !== "playing") return bad("Partie non démarrée", 409);
 
   const me = got.players.find((pl) => pl.user_id === userId);
-  if (!me) return bad("Not in game", 403);
+  if (!me) return bad("Vous n'êtes pas dans la partie", 403);
 
   const country = matchCountry(p.data.guess, got.game.difficulty);
   if (!country) return ok({ matched: false });

@@ -20,13 +20,13 @@ function shuffle<T>(arr: T[]): T[] {
 
 export async function POST(req: Request, ctx: { params: { code: string } }) {
   const userId = getUserId(req);
-  if (!userId) return bad("Missing user id", 401);
+  if (!userId) return bad("Identifiant utilisateur manquant", 401);
 
   const got = await loadGameByCode(ctx.params.code);
-  if (!got) return bad("Game not found", 404);
-  if (got.game.host_user_id !== userId) return bad("Only host can start", 403);
-  if (got.game.status !== "lobby") return bad("Already started");
-  if (got.players.length < 1) return bad("Not enough players");
+  if (!got) return bad("Partie introuvable", 404);
+  if (got.game.host_user_id !== userId) return bad("Seul l'hôte peut démarrer", 403);
+  if (got.game.status !== "lobby") return bad("Partie déjà démarrée");
+  if (got.players.length < 1) return bad("Pas assez de joueurs");
 
   const now = new Date();
   const admin = supabaseAdmin();

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(_req: Request, ctx: { params: { code: string } }) {
   const got = await loadGameByCode(ctx.params.code);
-  if (!got) return bad("Game not found", 404);
+  if (!got) return bad("Partie introuvable", 404);
   if (got.game.status !== "playing") return ok({ ok: true });
 
   const admin = supabaseAdmin();

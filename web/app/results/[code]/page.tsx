@@ -24,7 +24,7 @@ export default function ResultsPage({ params }: { params: { code: string } }) {
   return (
     <main className="min-h-screen p-6 max-w-5xl mx-auto">
       <h1 className="font-display text-4xl md:text-5xl font-extrabold text-center mt-6 mb-10">
-        Game over
+        Partie terminée
       </h1>
 
       <div className="flex items-end justify-center gap-3 md:gap-6 mb-10">
@@ -46,7 +46,7 @@ export default function ResultsPage({ params }: { params: { code: string } }) {
               <div className="font-semibold text-center truncate w-full">{p.username}</div>
               <div className="text-xs text-white/50">
                 {state?.settings.mode === "conquest"
-                  ? `${p.worldPercent.toFixed(2)}% • ${p.countriesCount} countries`
+                  ? `${p.worldPercent.toFixed(2)}% • ${p.countriesCount} pays`
                   : `${p.score} pts`}
               </div>
               <div
@@ -63,10 +63,10 @@ export default function ResultsPage({ params }: { params: { code: string } }) {
           <thead className="text-white/40 text-xs uppercase">
             <tr>
               <th className="text-left p-3">#</th>
-              <th className="text-left p-3">Player</th>
-              <th className="text-right p-3">Countries</th>
-              <th className="text-right p-3">Area</th>
-              <th className="text-right p-3">World %</th>
+              <th className="text-left p-3">Joueur</th>
+              <th className="text-right p-3">Pays</th>
+              <th className="text-right p-3">Superficie</th>
+              <th className="text-right p-3">% du monde</th>
               <th className="text-right p-3">Score</th>
             </tr>
           </thead>
@@ -89,8 +89,8 @@ export default function ResultsPage({ params }: { params: { code: string } }) {
       </div>
 
       <div className="flex gap-3 justify-center mt-8">
-        <button className="btn-primary" onClick={playAgain}>Play again</button>
-        <button className="btn-ghost" onClick={() => router.push("/")}>Home</button>
+        <button className="btn-primary" onClick={playAgain}>Rejouer</button>
+        <button className="btn-ghost" onClick={() => router.push("/")}>Accueil</button>
       </div>
     </main>
   );

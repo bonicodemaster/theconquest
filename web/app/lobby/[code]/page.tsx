@@ -37,7 +37,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
       <main className="min-h-screen flex items-center justify-center">
         <div className="glass rounded-2xl p-6 max-w-sm text-center">
           <p className="text-red-400 mb-3">{joinError}</p>
-          <button className="btn-ghost" onClick={() => router.push("/")}>Back to home</button>
+          <button className="btn-ghost" onClick={() => router.push("/")}>Retour à l'accueil</button>
         </div>
       </main>
     );
@@ -64,10 +64,10 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     <main className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto">
       <header className="flex items-center justify-between mb-6">
         <div>
-          <div className="label">Room</div>
+          <div className="label">Salon</div>
           <h1 className="font-display text-3xl font-bold tracking-wider">{state.code}</h1>
         </div>
-        <button className="btn-ghost" onClick={leave}>Leave</button>
+        <button className="btn-ghost" onClick={leave}>Quitter</button>
       </header>
 
       <div className="grid lg:grid-cols-3 gap-4">
@@ -77,14 +77,14 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
           animate={{ opacity: 1, y: 0 }}
           className="glass rounded-2xl p-5 space-y-4 lg:col-span-2"
         >
-          <h2 className="label">Settings</h2>
+          <h2 className="label">Paramètres</h2>
 
           <Field label="Mode">
             <Segmented<GameMode>
               value={settings.mode}
               options={[
-                { v: "conquest", l: "🌎 Conquest" },
-                { v: "mystery", l: "🎯 Mystery" },
+                { v: "conquest", l: "🌎 Conquête" },
+                { v: "mystery", l: "🎯 Mystère" },
               ]}
               disabled={!isHost}
               onChange={(mode) =>
@@ -98,7 +98,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
           </Field>
 
           {settings.mode === "conquest" ? (
-            <Field label="Duration">
+            <Field label="Durée">
               <Segmented<number>
                 value={settings.durationSec}
                 options={[
@@ -113,7 +113,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
             </Field>
           ) : (
             <>
-              <Field label="Round duration">
+              <Field label="Durée par manche">
                 <Segmented<number>
                   value={settings.durationSec}
                   options={[
@@ -125,7 +125,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
                   onChange={(v) => updateSettings({ durationSec: v })}
                 />
               </Field>
-              <Field label="Total countries">
+              <Field label="Nombre de pays">
                 <Segmented<number>
                   value={settings.totalCountries ?? 50}
                   options={[
@@ -141,11 +141,11 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
             </>
           )}
 
-          <Field label="Difficulty">
+          <Field label="Difficulté">
             <Segmented<Difficulty>
               value={settings.difficulty}
               options={[
-                { v: "easy", l: "Easy (fuzzy + aliases)" },
+                { v: "easy", l: "Facile (orthographe approximative + alias)" },
                 { v: "normal", l: "Normal (exact)" },
               ]}
               disabled={!isHost}
@@ -153,7 +153,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
             />
           </Field>
 
-          <Field label="Max players">
+          <Field label="Joueurs max">
             <Segmented<number>
               value={settings.maxPlayers}
               options={[2, 4, 8, 12, 20, 30].map((n) => ({ v: n, l: String(n) }))}
@@ -162,12 +162,12 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
             />
           </Field>
 
-          <Field label="Visibility">
+          <Field label="Visibilité">
             <Segmented<boolean>
               value={settings.isPrivate}
               options={[
                 { v: false, l: "Public" },
-                { v: true, l: "Private" },
+                { v: true, l: "Privé" },
               ]}
               disabled={!isHost}
               onChange={(v) => updateSettings({ isPrivate: v })}
@@ -177,11 +177,11 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
           <div className="pt-2">
             {isHost ? (
               <button onClick={start} className="btn-primary w-full text-base py-3">
-                Start game →
+                Démarrer la partie →
               </button>
             ) : (
               <p className="text-center text-sm text-white/50">
-                Waiting for host to start…
+                En attente du démarrage par l'hôte…
               </p>
             )}
           </div>
@@ -190,13 +190,13 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
         {/* Players + Chat */}
         <div className="flex flex-col gap-4 min-h-[500px]">
           <section className="glass rounded-2xl p-4">
-            <h2 className="label mb-3">Players · {state.players.length}/{settings.maxPlayers}</h2>
+            <h2 className="label mb-3">Joueurs · {state.players.length}/{settings.maxPlayers}</h2>
             <ul className="space-y-1">
               {state.players.map((p) => (
                 <li key={p.id} className="flex items-center gap-3 px-2 py-2 rounded-lg bg-white/[0.02]">
                   <span className="w-3 h-3 rounded-full" style={{ background: p.color }} />
                   <span className="flex-1 truncate font-medium">{p.username}</span>
-                  {p.isHost && <span className="text-[10px] uppercase font-bold text-amber-400">Host</span>}
+                  {p.isHost && <span className="text-[10px] uppercase font-bold text-amber-400">Hôte</span>}
                 </li>
               ))}
             </ul>
@@ -252,7 +252,7 @@ function Segmented<T>({
 function LobbySkeleton() {
   return (
     <main className="min-h-screen p-8 flex items-center justify-center">
-      <div className="text-white/40 animate-pulse">Connecting to room…</div>
+      <div className="text-white/40 animate-pulse">Connexion au salon…</div>
     </main>
   );
 }

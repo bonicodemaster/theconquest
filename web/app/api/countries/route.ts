@@ -1,4 +1,5 @@
 import { COUNTRIES } from "@/lib/countries";
+import { nameFr, continentFr } from "@/lib/countriesFr";
 
 export const runtime = "edge";
 
@@ -7,9 +8,9 @@ export async function GET() {
     COUNTRIES.map((c) => ({
       isoCode: c.isoCode,
       numericId: c.numericId,
-      name: c.name,
+      name: nameFr(c.isoCode, c.name),
       capital: c.capital,
-      continent: c.continent,
+      continent: continentFr(c.continent),
       areaKm2: c.areaKm2,
     })),
     { headers: { "cache-control": "public, max-age=3600, s-maxage=86400" } }

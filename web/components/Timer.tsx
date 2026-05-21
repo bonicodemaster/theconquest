@@ -18,7 +18,7 @@ export default function Timer({ endsAt }: { endsAt?: number }) {
 
   return (
     <div className={`glass rounded-2xl px-4 py-3 text-center ${danger ? "ring-1 ring-red-500/40" : ""}`}>
-      <div className="label">Time left</div>
+      <div className="label">Temps restant</div>
       <div className={`font-display text-3xl font-bold tabular-nums ${danger ? "text-red-400" : ""}`}>
         {formatTime(value)}
       </div>

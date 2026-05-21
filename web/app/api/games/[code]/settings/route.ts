@@ -8,15 +8,15 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request, ctx: { params: { code: string } }) {
   const userId = getUserId(req);
-  if (!userId) return bad("Missing user id", 401);
+  if (!userId) return bad("Identifiant utilisateur manquant", 401);
 
   const p = await parseBody(req, settingsSchema.partial());
   if (!p.ok) return p.res;
 
   const got = await loadGameByCode(ctx.params.code);
-  if (!got) return bad("Game not found", 404);
-  if (got.game.host_user_id !== userId) return bad("Only the host can change settings", 403);
-  if (got.game.status !== "lobby") return bad("Game already started");
+  if (!got) return bad("Partie introuvable", 404);
+  if (got.game.host_user_id !== userId) return bad("Seul l'hôte peut changer les paramètres", 403);
+  if (got.game.status !== "lobby") return bad("Partie déjà démarrée");
 
   const patch: Record<string, unknown> = {};
   if (p.data.mode !== undefined) patch.mode = p.data.mode;

@@ -9,8 +9,8 @@ export default function Leaderboard({ mode }: { mode: "conquest" | "mystery" }) 
   return (
     <div className="glass rounded-2xl p-4 flex flex-col gap-2 min-h-0">
       <div className="flex items-center justify-between">
-        <h3 className="label">Leaderboard</h3>
-        <span className="text-xs text-white/40">{lb.length} players</span>
+        <h3 className="label">Classement</h3>
+        <span className="text-xs text-white/40">{lb.length} joueurs</span>
       </div>
 
       <ul className="flex flex-col gap-1 overflow-y-auto pr-1">

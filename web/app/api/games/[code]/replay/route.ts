@@ -6,11 +6,11 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, ctx: { params: { code: string } }) {
   const userId = getUserId(req);
-  if (!userId) return bad("Missing user id", 401);
+  if (!userId) return bad("Identifiant utilisateur manquant", 401);
 
   const got = await loadGameByCode(ctx.params.code);
-  if (!got) return bad("Game not found", 404);
-  if (got.game.host_user_id !== userId) return bad("Only host can replay", 403);
+  if (!got) return bad("Partie introuvable", 404);
+  if (got.game.host_user_id !== userId) return bad("Seul l'hôte peut relancer", 403);
 
   const admin = supabaseAdmin();
   await admin.from("conquests").delete().eq("game_id", got.game.id);

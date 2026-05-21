@@ -56,7 +56,7 @@ export default function Home() {
           transition={{ duration: 0.5 }}
         >
           <div className="inline-block px-3 py-1 text-[11px] font-bold uppercase tracking-widest rounded-full bg-brand-500/20 text-brand-400 mb-4">
-            real-time multiplayer · geography
+            multijoueur en temps réel · géographie
           </div>
           <h1 className="font-display text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
             World{" "}
@@ -66,8 +66,8 @@ export default function Home() {
             Quiz
           </h1>
           <p className="mt-4 text-white/60 max-w-md">
-            Type country names faster than your opponents. Conquer the map, climb the
-            leaderboard, claim the world.
+            Tape les noms de pays plus vite que tes adversaires. Conquiers la carte,
+            gravis le classement, domine le monde.
           </p>
         </motion.div>
 
@@ -78,7 +78,7 @@ export default function Home() {
           className="glass rounded-3xl p-6 space-y-5"
         >
           <div>
-            <label className="label">Your name</label>
+            <label className="label">Votre nom</label>
             <input
               className="input mt-1"
               value={name}
@@ -97,32 +97,32 @@ export default function Home() {
                   onClick={() => setMode(m)}
                   className={`btn ${mode === m ? "btn-primary" : "btn-ghost"}`}
                 >
-                  {m === "conquest" ? "🌎 Conquest" : "🎯 Mystery"}
+                  {m === "conquest" ? "🌎 Conquête" : "🎯 Mystère"}
                 </button>
               ))}
             </div>
           </div>
 
           <button onClick={createGame} disabled={busy || !name} className="btn-primary w-full text-base py-3">
-            Create game
+            Créer une partie
           </button>
 
           <div className="flex items-center gap-3 text-xs text-white/40">
             <span className="flex-1 h-px bg-white/10" />
-            or join existing
+            ou rejoindre une partie
             <span className="flex-1 h-px bg-white/10" />
           </div>
 
           <div className="flex gap-2">
             <input
               className="input font-mono uppercase tracking-widest"
-              placeholder="ROOM CODE"
+              placeholder="CODE DU SALON"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               maxLength={6}
             />
             <button onClick={joinGame} disabled={busy || !code || !name} className="btn-ghost">
-              Join
+              Rejoindre
             </button>
           </div>
 

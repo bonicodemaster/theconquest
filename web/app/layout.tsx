@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   title: "World Conquest Quiz",
-  description: "Conquer the world by typing country names — real-time multiplayer geography game.",
+  description: "Conquiers le monde en tapant les noms de pays — quiz de géographie multijoueur en temps réel.",
 };
 
 export const viewport: Viewport = {
@@ -14,7 +14,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="fr" className="dark">
       <body className="min-h-screen bg-ink-950 text-white antialiased bg-grid">
         {children}
       </body>

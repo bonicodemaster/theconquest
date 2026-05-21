@@ -14,7 +14,7 @@ const schema = z.object({ username: usernameSchema, settings: settingsSchema });
 export async function POST(req: Request) {
   try {
     const userId = getUserId(req);
-    if (!userId) return bad("Missing user id", 401);
+    if (!userId) return bad("Identifiant utilisateur manquant", 401);
 
     const p = await parseBody(req, schema);
     if (!p.ok) return p.res;
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     if (error || !game) {
       console.error("[api/games] insert games failed", error);
-      return bad(error?.message ?? "Could not create game", 500);
+      return bad(error?.message ?? "Impossible de créer la partie", 500);
     }
 
     const { error: pe } = await admin.from("players").insert({
@@ -58,6 +58,6 @@ export async function POST(req: Request) {
     return ok({ code });
   } catch (e: any) {
     console.error("[api/games] unhandled", e);
-    return bad(e?.message ?? "Internal error", 500);
+    return bad(e?.message ?? "Erreur interne", 500);
   }
 }

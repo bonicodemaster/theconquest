@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, ctx: { params: { code: string } }) {
   const userId = getUserId(req);
-  if (!userId) return bad("Missing user id", 401);
+  if (!userId) return bad("Identifiant utilisateur manquant", 401);
 
   const got = await loadGameByCode(ctx.params.code);
   if (!got) return ok({ ok: true });

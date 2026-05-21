@@ -23,7 +23,7 @@ export function getUserId(req: Request): string | null {
 export async function parseBody<T>(req: Request, schema: ZodSchema<T>): Promise<{ ok: true; data: T } | { ok: false; res: Response }> {
   const raw = await req.json().catch(() => null);
   const parsed = schema.safeParse(raw);
-  if (!parsed.success) return { ok: false, res: bad(parsed.error.issues[0]?.message ?? "Invalid input") };
+  if (!parsed.success) return { ok: false, res: bad(parsed.error.issues[0]?.message ?? "Entrée invalide") };
   return { ok: true, data: parsed.data };
 }
 

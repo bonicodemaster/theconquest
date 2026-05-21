@@ -148,7 +148,7 @@ export default function WorldMap({ countries, highlightIso, interactive = true }
           >
             <span className="inline-block w-3 h-3 rounded-full" style={{ background: lastConquest.color }} />
             <span className="font-semibold">{lastConquest.username}</span>
-            <span className="text-white/60">claimed</span>
+            <span className="text-white/60">a conquis</span>
             <span className="font-mono">{lastConquest.isoCode}</span>
           </motion.div>
         )}

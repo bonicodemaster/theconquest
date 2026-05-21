@@ -63,7 +63,7 @@ export default function AnswerInput() {
             void submit();
           }
         }}
-        placeholder="Type a country and press Enter…"
+        placeholder="Tape un pays et appuie sur Entrée…"
         className="input text-lg font-medium w-full"
       />
       {/* Hidden submit button guarantees Enter triggers submit even in edge cases */}
