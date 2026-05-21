@@ -23,7 +23,12 @@ export function useGameRealtime(code?: string) {
 
     const refetch = () => {
       api.getState(code).then((r) => {
-        if (cancelled || !r.ok) return;
+        if (cancelled) return;
+        if (!r.ok) {
+          console.warn("[realtime] poll failed", r.error);
+          return;
+        }
+        console.log("[realtime] poll → state.settings", r.data.state.settings, "status=", r.data.state.status);
         setState(r.data.state);
         setLb(r.data.leaderboard);
       });
@@ -45,7 +50,7 @@ export function useGameRealtime(code?: string) {
       cb: (payload: Extract<RoomEvent, { type: T }>["payload"]) => void
     ) => ch.on("broadcast", { event: type }, ({ payload }) => cb(payload));
 
-    on("state", (s) => setState(s));
+    on("state", (s) => { console.log("[realtime] broadcast state →", s.settings); setState(s); });
     on("leaderboard_updated", (l) => setLb(l));
     on("chat_message", (m) => pushChat(m));
     on("country_conquered", (c) =>

@@ -25,21 +25,22 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   // confirms (the next state broadcast/poll matches the optimistic value).
   const [optimistic, setOptimistic] = useState<Partial<GameSettings>>({});
 
-  // If the user landed here directly, attempt to join.
-  // Only try to join while the game is still in lobby — once it's playing,
-  // the auto-redirect effect below will move us to /game.
+  // If the user landed here directly, attempt to join exactly once on mount.
   useEffect(() => {
     if (!username) { router.replace("/"); return; }
-    if (state && state.status !== "lobby") return;
     let cancelled = false;
     (async () => {
-      const me = state?.players.find((p) => p.userId === getUserId());
-      if (me) return; // already in the room
       const res = await api.joinGame(code, { username });
-      if (!cancelled && !res.ok) setJoinError(res.error);
+      if (!cancelled && !res.ok) {
+        console.error("[lobby] join failed:", res.error);
+        setJoinError(res.error);
+      }
     })();
     return () => { cancelled = true; };
-  }, [code, state, username, router]);
+  // Intentionally only run once per (code, username) mount — re-joining on
+  // every state change was causing extra writes and flicker.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, username]);
 
   // Clear optimistic settings as soon as the server state catches up to them.
   useEffect(() => {
@@ -50,9 +51,14 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
       const next = { ...prev };
       let changed = false;
       for (const k of keys) {
-        if ((state.settings as any)[k] === (prev as any)[k]) {
+        const serverVal = (state.settings as any)[k];
+        const optVal = (prev as any)[k];
+        if (serverVal === optVal) {
+          console.log(`[lobby] cleanup: server matches optimistic for ${String(k)} =`, serverVal);
           delete (next as any)[k];
           changed = true;
+        } else {
+          console.log(`[lobby] cleanup: KEEP optimistic ${String(k)} (server=${JSON.stringify(serverVal)}, opt=${JSON.stringify(optVal)})`);
         }
       }
       return changed ? next : prev;
@@ -86,20 +92,21 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const settings: GameSettings = { ...state.settings, ...optimistic };
 
   const updateSettings = async (patch: Partial<GameSettings>) => {
-    // Apply locally for instant feedback. The dedicated useEffect above will
-    // clear each key as soon as the server state reflects it (broadcast OR
-    // poll, whichever wins).
-    setOptimistic((prev) => ({ ...prev, ...patch }));
+    console.log("[lobby] CLICK updateSettings", patch);
+    setOptimistic((prev) => {
+      const next = { ...prev, ...patch };
+      console.log("[lobby] optimistic set →", next);
+      return next;
+    });
     const res = await api.updateSettings(code, patch);
+    console.log("[lobby] PATCH response", res);
     if (!res.ok) {
-      console.error("[settings] update rejected:", res.error);
-      // Drop optimistic so the UI snaps back to the truth
+      console.error("[lobby] update rejected:", res.error);
       setOptimistic((prev) => {
         const next = { ...prev };
         for (const k of Object.keys(patch)) delete (next as any)[k];
         return next;
       });
-      // If the game moved past lobby, route accordingly
       const cur = await api.getState(code);
       if (cur.ok) {
         if (cur.data.state.status === "playing") router.push(`/game/${code}`);
