@@ -33,7 +33,7 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
   }).select("id, created_at").single();
   if (error || !row) return bad(error?.message ?? "Failed", 500);
 
-  await broadcast(admin, ctx.params.code, [{
+  await broadcast(ctx.params.code, [{
     type: "chat_message",
     payload: {
       id: row.id,

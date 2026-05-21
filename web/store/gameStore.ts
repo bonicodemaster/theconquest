@@ -34,7 +34,21 @@ export const useGameStore = create<GameStore>((set) => ({
   },
 
   state: null,
-  setState: (s) => set({ state: s }),
+  // Drop stale reads: for the same room, never let an older DB version
+  // (replica lag / cached GET) overwrite newer state. Equal versions are
+  // allowed through (e.g. a player join re-broadcasts without bumping the
+  // games row). A different code is always a different room → accept.
+  setState: (s) =>
+    set((cur) => {
+      if (
+        s && cur.state &&
+        s.code === cur.state.code &&
+        s.version < cur.state.version
+      ) {
+        return cur;
+      }
+      return { state: s };
+    }),
 
   leaderboard: [],
   setLeaderboard: (l) => set({ leaderboard: l }),

@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { getUserId } from "@/lib/identity";
 import { useGameRealtime } from "@/lib/useGameRealtime";
-import { markFresh } from "@/lib/stateClock";
 import { useGameStore } from "@/store/gameStore";
 import Chat from "@/components/Chat";
 import type { Difficulty, GameMode, GameSettings } from "@/types/shared";
@@ -54,14 +53,9 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
       const next = { ...prev };
       let changed = false;
       for (const k of keys) {
-        const serverVal = (state.settings as any)[k];
-        const optVal = (prev as any)[k];
-        if (serverVal === optVal) {
-          console.log(`[lobby] cleanup: server matches optimistic for ${String(k)} =`, serverVal);
+        if ((state.settings as any)[k] === (prev as any)[k]) {
           delete (next as any)[k];
           changed = true;
-        } else {
-          console.log(`[lobby] cleanup: KEEP optimistic ${String(k)} (server=${JSON.stringify(serverVal)}, opt=${JSON.stringify(optVal)})`);
         }
       }
       return changed ? next : prev;
@@ -95,17 +89,11 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const settings: GameSettings = { ...state.settings, ...optimistic };
 
   const updateSettings = async (patch: Partial<GameSettings>) => {
-    console.log("[lobby] CLICK updateSettings", patch);
-    setOptimistic((prev) => {
-      const next = { ...prev, ...patch };
-      console.log("[lobby] optimistic set →", next);
-      return next;
-    });
+    setOptimistic((prev) => ({ ...prev, ...patch }));
     const res = await api.updateSettings(code, patch);
-    console.log("[lobby] PATCH response", res);
     if (res.ok && res.data.state) {
-      // Use the authoritative state returned by the write (no replica-lag risk)
-      markFresh();
+      // Use the authoritative state returned by the write (newest version,
+      // so the version guard accepts it and later stale polls can't revert it).
       setState(res.data.state);
       if (res.data.leaderboard) setLb(res.data.leaderboard);
     }
@@ -131,7 +119,6 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     const res = await api.startGame(code);
     if (res.ok) {
       if (res.data.state) {
-        markFresh();
         setState(res.data.state);
         if (res.data.leaderboard) setLb(res.data.leaderboard);
       }

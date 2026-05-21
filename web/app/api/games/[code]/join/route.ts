@@ -18,15 +18,19 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
 
   const got = await loadGameByCode(ctx.params.code);
   if (!got) return bad("Partie introuvable", 404);
-  if (got.game.status !== "lobby") return bad("Partie déjà démarrée");
-  if (got.players.length >= got.game.max_players) return bad("Partie complète");
 
-  // Idempotent re-join (same userId)
+  // Idempotent re-join (same userId) — must run BEFORE the status/capacity
+  // checks. An already-joined player (e.g. the host bounced here by a transient
+  // route) should re-sync and continue, never be rejected with "déjà démarrée".
   const existing = got.players.find((p) => p.user_id === userId);
   if (existing) {
     await emitState(ctx.params.code);
     return ok({ ok: true });
   }
+
+  // New joiner: only allowed while still in the lobby and below capacity.
+  if (got.game.status !== "lobby") return bad("Partie déjà démarrée");
+  if (got.players.length >= got.game.max_players) return bad("Partie complète");
 
   const used = new Set(got.players.map((p) => p.color));
   const color = PLAYER_COLORS.find((c) => !used.has(c)) ?? PLAYER_COLORS[got.players.length % PLAYER_COLORS.length];

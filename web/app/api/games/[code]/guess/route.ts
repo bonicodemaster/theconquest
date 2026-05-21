@@ -76,7 +76,7 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
         events.push({ type: "game_finished", payload: { state: finalState, leaderboard: finalLb } } as any);
       }
     }
-    await broadcast(admin, ctx.params.code, events);
+    await broadcast(ctx.params.code, events);
     return ok({ matched: true, isoCode: country.isoCode });
   }
 
@@ -101,7 +101,7 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
   if (fresh) {
     const lb = leaderboardFrom(fresh.players, fresh.conquests, "mystery");
     const state = publicState(fresh.game, fresh.players, fresh.conquests);
-    await broadcast(admin, ctx.params.code, [
+    await broadcast(ctx.params.code, [
       { type: "leaderboard_updated", payload: lb },
       { type: "state", payload: state },
       ...(state.round ? [{ type: "mystery_round_ended" as const, payload: state.round }] : []),

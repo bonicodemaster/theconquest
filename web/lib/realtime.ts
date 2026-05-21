@@ -36,7 +36,6 @@ export const channelName = (code: string) => `game:${code.toUpperCase()}`;
 const SUBSCRIBE_TIMEOUT_MS = 700;
 
 export async function broadcast(
-  _client: unknown,
   code: string,
   events: RoomEvent[]
 ): Promise<void> {

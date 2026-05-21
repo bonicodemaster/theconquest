@@ -5,7 +5,6 @@ import { supabaseBrowser } from "./supabase/client";
 import { channelName, type RoomEvent } from "./realtime";
 import { useGameStore } from "@/store/gameStore";
 import { api } from "./api";
-import { isInFreshWindow, markFresh } from "./stateClock";
 
 /**
  * Mount once per game-related page. Subscribes to the room's broadcast channel
@@ -23,20 +22,16 @@ export function useGameRealtime(code?: string) {
     let cancelled = false;
 
     const refetch = () => {
-      // If we just got a fresh write response or broadcast, don't risk
-      // overwriting it with a stale read from a Supabase replica.
-      if (isInFreshWindow()) {
-        console.log("[realtime] poll skipped (within fresh window)");
-        return;
-      }
       api.getState(code).then((r) => {
-        if (cancelled) return;
-        if (!r.ok) {
-          console.warn("[realtime] poll failed", r.error);
-          return;
-        }
-        console.log("[realtime] poll → state.settings", r.data.state.settings, "status=", r.data.state.status);
-        setState(r.data.state);
+        if (cancelled || !r.ok) return;
+        // Drop stale reads (replica lag / cached GET): if this read is an older
+        // version of the same room than what we already hold, ignore it
+        // entirely — state AND leaderboard — so it can't revert settings or
+        // bounce us back to the lobby.
+        const cur = useGameStore.getState().state;
+        const incoming = r.data.state;
+        if (cur && cur.code === incoming.code && incoming.version < cur.version) return;
+        setState(incoming);
         setLb(r.data.leaderboard);
       });
     };
@@ -57,11 +52,7 @@ export function useGameRealtime(code?: string) {
       cb: (payload: Extract<RoomEvent, { type: T }>["payload"]) => void
     ) => ch.on("broadcast", { event: type }, ({ payload }) => cb(payload));
 
-    on("state", (s) => {
-      console.log("[realtime] broadcast state →", s.settings);
-      markFresh();
-      setState(s);
-    });
+    on("state", (s) => setState(s));
     on("leaderboard_updated", (l) => setLb(l));
     on("chat_message", (m) => pushChat(m));
     on("country_conquered", (c) =>

@@ -59,6 +59,13 @@ export interface MysteryRound {
 
 export interface PublicGameState {
   code: string;
+  /**
+   * Monotonic room version = games.updated_at (epoch ms). Bumped by the DB
+   * trigger on every games UPDATE. The client uses it to drop stale reads
+   * (replica lag / cached responses) instead of letting them overwrite newer
+   * state. See store/gameStore.ts.
+   */
+  version: number;
   status: GameStatus;
   settings: GameSettings;
   players: Player[];

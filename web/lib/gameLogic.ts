@@ -35,6 +35,7 @@ export interface GameRow {
   mystery_winner_user_id: string | null;
   mystery_revealed_name: string | null;
   mystery_round_started_at: string | null;
+  updated_at: string;
 }
 
 export interface PlayerRow {
@@ -100,6 +101,8 @@ export function publicState(
 
   return {
     code: g.code,
+    // Falls back to 0 if somehow absent so a missing version never blocks updates.
+    version: g.updated_at ? new Date(g.updated_at).getTime() : 0,
     status: g.status,
     settings: settingsOf(g),
     players,

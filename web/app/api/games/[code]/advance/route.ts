@@ -40,7 +40,7 @@ export async function POST(_req: Request, ctx: { params: { code: string } }) {
     if (fresh) {
       const state = publicState(fresh.game, fresh.players, fresh.conquests);
       const lb = leaderboardFrom(fresh.players, fresh.conquests, "conquest");
-      await broadcast(admin, ctx.params.code, [
+      await broadcast(ctx.params.code, [
         { type: "state", payload: state },
         { type: "leaderboard_updated", payload: lb },
         { type: "game_finished", payload: { state, leaderboard: lb } },
@@ -110,7 +110,7 @@ export async function POST(_req: Request, ctx: { params: { code: string } }) {
     } else if (state.round) {
       events.push({ type: "mystery_new_round", payload: state.round });
     }
-    await broadcast(admin, ctx.params.code, events);
+    await broadcast(ctx.params.code, events);
   }
   return ok({ ok: true });
 }

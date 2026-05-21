@@ -30,7 +30,7 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
   if (got.game.status === "playing") {
     const state = publicState(got.game, got.players, got.conquests);
     const lb = leaderboardFrom(got.players, got.conquests, got.game.mode);
-    await broadcast(supabaseAdmin(), ctx.params.code, [
+    await broadcast(ctx.params.code, [
       { type: "game_started", payload: state },
       { type: "state", payload: state },
       { type: "leaderboard_updated", payload: lb },
@@ -106,7 +106,7 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
   const freshGame = data[0] as typeof got.game;
   const state = publicState(freshGame, got.players, got.conquests);
   const lb = leaderboardFrom(got.players, got.conquests, freshGame.mode);
-  await broadcast(admin, ctx.params.code, [
+  await broadcast(ctx.params.code, [
     { type: "game_started", payload: state },
     { type: "state", payload: state },
     { type: "leaderboard_updated", payload: lb },

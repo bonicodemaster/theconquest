@@ -64,7 +64,7 @@ export async function emitState(code: string, opts: { withLeaderboard?: boolean;
     });
   }
   if (opts.extraEvents) events.push(...opts.extraEvents);
-  await broadcast(supabaseAdmin(), code, events);
+  await broadcast(code, events);
 }
 
 // --- shared zod schemas ---

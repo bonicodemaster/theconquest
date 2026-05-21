@@ -55,7 +55,7 @@ export async function PATCH(req: Request, ctx: { params: { code: string } }) {
   const freshGame = data[0] as GameRow;
   const state = publicState(freshGame, got.players, got.conquests);
   const lb = leaderboardFrom(got.players, got.conquests, freshGame.mode);
-  await broadcast(supabaseAdmin(), ctx.params.code, [
+  await broadcast(ctx.params.code, [
     { type: "state", payload: state },
     { type: "leaderboard_updated", payload: lb },
   ]);
