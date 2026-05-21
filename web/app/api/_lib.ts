@@ -35,7 +35,14 @@ export async function parseBody<T>(req: Request, schema: ZodSchema<T>): Promise<
 
 export async function loadGameByCode(code: string) {
   const admin = supabaseAdmin();
-  const { data: g } = await admin.from("games").select("*").eq("code", code.toUpperCase()).maybeSingle();
+  // Force a fresh read every time — bypass any client / connection-level cache.
+  const { data: g } = await admin
+    .from("games")
+    .select("*")
+    .eq("code", code.toUpperCase())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (!g) return null;
   const [{ data: ps }, { data: cs }] = await Promise.all([
     admin.from("players").select("*").eq("game_id", g.id).order("joined_at"),
