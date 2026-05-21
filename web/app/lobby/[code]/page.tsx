@@ -19,6 +19,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const username = useGameStore((s) => s.username);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   // Optimistic settings: applied locally on click, cleared once the server
   // confirms (the next state broadcast/poll matches the optimistic value).
@@ -88,10 +89,15 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
 
   const start = async () => {
     if (starting) return;
+    setStartError(null);
     setStarting(true);
     const res = await api.startGame(code);
-    if (res.ok) router.push(`/game/${code}`);   // navigate as soon as the server confirms
-    else setStarting(false);
+    if (res.ok) router.push(`/game/${code}`);
+    else {
+      console.error("[start] rejected:", res.error);
+      setStartError(res.error);
+      setStarting(false);
+    }
   };
   const leave = async () => {
     router.push("/");                            // optimistic — don't wait for the API
@@ -214,9 +220,14 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
 
           <div className="pt-2">
             {isHost ? (
-              <button onClick={start} disabled={starting} className="btn-primary w-full text-base py-3">
-                {starting ? "Démarrage…" : "Démarrer la partie →"}
-              </button>
+              <>
+                <button onClick={start} disabled={starting} className="btn-primary w-full text-base py-3">
+                  {starting ? "Démarrage…" : "Démarrer la partie →"}
+                </button>
+                {startError && (
+                  <p className="text-center text-sm text-red-400 mt-2">{startError}</p>
+                )}
+              </>
             ) : (
               <p className="text-center text-sm text-white/50">
                 En attente du démarrage par l'hôte…
