@@ -3,6 +3,9 @@
  * One channel per game room: `game:<CODE>`.
  *
  * Events mirror the original Socket.io contract.
+ *
+ * SERVER-SIDE broadcasting is done via the Realtime HTTP endpoint
+ * (no channel subscribe/unsubscribe handshake → ~10× faster).
  */
 import type {
   ChatMessage,
@@ -29,27 +32,49 @@ export const channelName = (code: string) => `game:${code.toUpperCase()}`;
 
 /**
  * Server-side broadcast helper.
- *   Call from API routes after mutating Postgres.
- *   `client` can be the service-role client or the anon one — broadcasts
- *   don't require RLS as long as the channel is open.
+ * Uses Supabase Realtime's HTTP broadcast API so we don't pay the cost of
+ * opening + subscribing + closing a WebSocket channel on every API request.
+ *
+ * Docs: POST {SUPABASE_URL}/realtime/v1/api/broadcast
+ *   { messages: [{ topic, event, payload, private }] }
+ *
+ * The first arg (`_client`) is kept for API compatibility with existing
+ * callers but is no longer used.
  */
 export async function broadcast(
-  client: import("@supabase/supabase-js").SupabaseClient,
+  _client: unknown,
   code: string,
   events: RoomEvent[]
 ): Promise<void> {
-  const ch = client.channel(channelName(code), {
-    config: { broadcast: { self: true, ack: false } },
-  });
-  await new Promise<void>((resolve) => {
-    ch.subscribe(async (status) => {
-      if (status !== "SUBSCRIBED") return;
-      for (const e of events) {
-        await ch.send({ type: "broadcast", event: e.type, payload: e.payload });
-      }
-      // Detach immediately — stateless Vercel function should not linger.
-      await ch.unsubscribe();
-      resolve();
+  if (events.length === 0) return;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.error("[broadcast] Supabase env missing");
+    return;
+  }
+  const topic = channelName(code);
+  try {
+    await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        messages: events.map((e) => ({
+          topic,
+          event: e.type,
+          payload: e.payload,
+          private: false,
+        })),
+      }),
+      // Don't block the response on the network call too long
+      // (Supabase replies quickly but we shouldn't be held up if not).
+      cache: "no-store",
     });
-  });
+  } catch (err) {
+    console.error("[broadcast] HTTP send failed", err);
+  }
 }

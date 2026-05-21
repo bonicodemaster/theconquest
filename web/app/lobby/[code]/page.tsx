@@ -61,10 +61,17 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     void api.updateSettings(code, patch);
   };
 
-  const start = () => void api.startGame(code);
+  const [starting, setStarting] = useState(false);
+  const start = async () => {
+    if (starting) return;
+    setStarting(true);
+    const res = await api.startGame(code);
+    if (res.ok) router.push(`/game/${code}`);   // navigate as soon as the server confirms
+    else setStarting(false);
+  };
   const leave = async () => {
-    await api.leaveGame(code);
-    router.push("/");
+    router.push("/");                            // optimistic — don't wait for the API
+    void api.leaveGame(code);
   };
 
   return (
@@ -183,8 +190,8 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
 
           <div className="pt-2">
             {isHost ? (
-              <button onClick={start} className="btn-primary w-full text-base py-3">
-                Démarrer la partie →
+              <button onClick={start} disabled={starting} className="btn-primary w-full text-base py-3">
+                {starting ? "Démarrage…" : "Démarrer la partie →"}
               </button>
             ) : (
               <p className="text-center text-sm text-white/50">

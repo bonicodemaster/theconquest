@@ -104,7 +104,7 @@ export default function Home() {
           </div>
 
           <button onClick={createGame} disabled={busy || !name} className="btn-primary w-full text-base py-3">
-            Créer une partie
+            {busy ? "Création…" : "Créer une partie"}
           </button>
 
           <div className="flex items-center gap-3 text-xs text-white/40">
@@ -122,7 +122,7 @@ export default function Home() {
               maxLength={6}
             />
             <button onClick={joinGame} disabled={busy || !code || !name} className="btn-ghost">
-              Rejoindre
+              {busy ? "…" : "Rejoindre"}
             </button>
           </div>
 
