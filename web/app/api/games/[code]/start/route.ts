@@ -68,19 +68,21 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
 
   if (got.game.mode === "conquest") {
     const endsAt = new Date(now.getTime() + got.game.duration_sec * 1000);
-    const { error: uErr } = await admin.from("games")
+    const { data, error: uErr } = await admin.from("games")
       .update({ status: "playing", started_at: now.toISOString(), ends_at: endsAt.toISOString() })
-      .eq("id", got.game.id);
-    if (uErr) {
-      console.error("[start] update games failed", uErr);
-      return bad(uErr.message, 500);
+      .eq("id", got.game.id)
+      .select("id");
+    if (uErr) { console.error("[start] update games failed", uErr); return bad(uErr.message, 500); }
+    if (!data || data.length === 0) {
+      console.error("[start] 0 rows updated — RLS likely blocking. Check SUPABASE_SERVICE_ROLE_KEY in Vercel env.");
+      return bad("Écriture bloquée par la base (clé service_role probablement incorrecte)", 500);
     }
   } else {
     const total = Math.min(got.game.total_countries ?? 50, COUNTRIES.length);
     const deck = shuffle(COUNTRIES.map((c) => c.isoCode)).slice(0, total);
     const firstIso = deck[0];
     const endsAt = new Date(now.getTime() + got.game.duration_sec * 1000);
-    const { error: uErr } = await admin.from("games").update({
+    const { data, error: uErr } = await admin.from("games").update({
       status: "playing",
       started_at: now.toISOString(),
       total_rounds: total,
@@ -91,10 +93,11 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
       round_index: 0,
       mystery_winner_user_id: null,
       mystery_revealed_name: null,
-    }).eq("id", got.game.id);
-    if (uErr) {
-      console.error("[start] update games failed", uErr);
-      return bad(uErr.message, 500);
+    }).eq("id", got.game.id).select("id");
+    if (uErr) { console.error("[start] update games failed", uErr); return bad(uErr.message, 500); }
+    if (!data || data.length === 0) {
+      console.error("[start] 0 rows updated — RLS likely blocking. Check SUPABASE_SERVICE_ROLE_KEY in Vercel env.");
+      return bad("Écriture bloquée par la base (clé service_role probablement incorrecte)", 500);
     }
   }
 

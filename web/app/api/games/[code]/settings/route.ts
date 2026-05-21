@@ -31,10 +31,18 @@ export async function PATCH(req: Request, ctx: { params: { code: string } }) {
   if (p.data.totalCountries !== undefined) patch.total_countries = p.data.totalCountries;
 
   if (Object.keys(patch).length) {
-    const { error } = await supabaseAdmin().from("games").update(patch).eq("id", got.game.id);
+    const { data, error } = await supabaseAdmin()
+      .from("games")
+      .update(patch)
+      .eq("id", got.game.id)
+      .select("id");
     if (error) {
       console.error("[settings] update games failed", error);
       return bad(error.message, 500);
+    }
+    if (!data || data.length === 0) {
+      console.error("[settings] 0 rows updated — RLS likely blocking. Check SUPABASE_SERVICE_ROLE_KEY in Vercel env.");
+      return bad("Écriture bloquée par la base (clé service_role probablement incorrecte)", 500);
     }
   }
   await emitState(ctx.params.code);
