@@ -16,7 +16,12 @@ export async function PATCH(req: Request, ctx: { params: { code: string } }) {
   const got = await loadGameByCode(ctx.params.code);
   if (!got) return bad("Partie introuvable", 404);
   if (got.game.host_user_id !== userId) return bad("Seul l'hôte peut changer les paramètres", 403);
-  if (got.game.status !== "lobby") return bad("Partie déjà démarrée");
+  // If the game already moved past lobby, return ok + current state so the
+  // client re-renders / auto-redirects instead of being stuck on an error.
+  if (got.game.status !== "lobby") {
+    await emitState(ctx.params.code);
+    return ok({ ok: true, status: got.game.status });
+  }
 
   const patch: Record<string, unknown> = {};
   if (p.data.mode !== undefined) patch.mode = p.data.mode;
@@ -28,7 +33,10 @@ export async function PATCH(req: Request, ctx: { params: { code: string } }) {
 
   if (Object.keys(patch).length) {
     const { error } = await supabaseAdmin().from("games").update(patch).eq("id", got.game.id);
-    if (error) return bad(error.message, 500);
+    if (error) {
+      console.error("[settings] update games failed", error);
+      return bad(error.message, 500);
+    }
   }
   await emitState(ctx.params.code);
   return ok({ ok: true });

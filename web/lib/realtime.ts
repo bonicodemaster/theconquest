@@ -3,10 +3,8 @@
  * One channel per game room: `game:<CODE>`.
  *
  * Events mirror the original Socket.io contract.
- *
- * SERVER-SIDE broadcasting is done via the Realtime HTTP endpoint
- * (no channel subscribe/unsubscribe handshake → ~10× faster).
  */
+import { createClient } from "@supabase/supabase-js";
 import type {
   ChatMessage,
   ConqueredCountry,
@@ -32,14 +30,13 @@ export const channelName = (code: string) => `game:${code.toUpperCase()}`;
 
 /**
  * Server-side broadcast helper.
- * Uses Supabase Realtime's HTTP broadcast API so we don't pay the cost of
- * opening + subscribing + closing a WebSocket channel on every API request.
+ * Uses Supabase Realtime via a short-lived WebSocket: opens channel,
+ * subscribes, sends all events, unsubscribes. This is the only
+ * delivery mechanism guaranteed to reach existing subscribers, because
+ * the supabase-js client subscribes on internal topic "realtime:<name>".
  *
- * Docs: POST {SUPABASE_URL}/realtime/v1/api/broadcast
- *   { messages: [{ topic, event, payload, private }] }
- *
- * The first arg (`_client`) is kept for API compatibility with existing
- * callers but is no longer used.
+ * The (unused) first arg is kept for API compatibility with callers that
+ * still pass `supabaseAdmin()`.
  */
 export async function broadcast(
   _client: unknown,
@@ -53,30 +50,32 @@ export async function broadcast(
     console.error("[broadcast] Supabase env missing");
     return;
   }
-  const topic = channelName(code);
+  // A short-lived client per call. Realtime needs a persistent socket to
+  // subscribe, and we want to tear it down so the serverless function exits.
+  const c = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { params: { eventsPerSecond: 50 } },
+  });
+  const ch = c.channel(channelName(code), {
+    config: { broadcast: { self: true, ack: false } },
+  });
   try {
-    const res = await fetch(`${url}/realtime/v1/api/broadcast`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        messages: events.map((e) => ({
-          topic,
-          event: e.type,
-          payload: e.payload,
-          private: false,
-        })),
-      }),
-      cache: "no-store",
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => {
+        console.error("[broadcast] subscribe timeout");
+        resolve();
+      }, 4000);
+      ch.subscribe(async (status) => {
+        if (status !== "SUBSCRIBED") return;
+        clearTimeout(timeout);
+        for (const e of events) {
+          await ch.send({ type: "broadcast", event: e.type, payload: e.payload });
+        }
+        resolve();
+      });
     });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("[broadcast] non-200", res.status, body);
-    }
-  } catch (err) {
-    console.error("[broadcast] HTTP send failed", err);
+  } finally {
+    try { await ch.unsubscribe(); } catch {}
+    try { await c.removeAllChannels(); } catch {}
   }
 }

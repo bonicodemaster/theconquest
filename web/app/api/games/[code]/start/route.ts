@@ -25,23 +25,62 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
   const got = await loadGameByCode(ctx.params.code);
   if (!got) return bad("Partie introuvable", 404);
   if (got.game.host_user_id !== userId) return bad("Seul l'hôte peut démarrer", 403);
-  if (got.game.status !== "lobby") return bad("Partie déjà démarrée");
   if (got.players.length < 1) return bad("Pas assez de joueurs");
+  // Idempotent: if already playing, just re-emit state and return ok.
+  if (got.game.status === "playing") {
+    const state = publicState(got.game, got.players, got.conquests);
+    const lb = leaderboardFrom(got.players, got.conquests, got.game.mode);
+    await broadcast(supabaseAdmin(), ctx.params.code, [
+      { type: "game_started", payload: state },
+      { type: "state", payload: state },
+      { type: "leaderboard_updated", payload: lb },
+    ]);
+    return ok({ ok: true });
+  }
+  // If finished, reset everything first (treat as host-initiated replay)
+  if (got.game.status === "finished") {
+    const admin = supabaseAdmin();
+    await admin.from("conquests").delete().eq("game_id", got.game.id);
+    await admin.from("players").update({ score: 0, ready: false }).eq("game_id", got.game.id);
+    await admin.from("games").update({
+      status: "lobby",
+      started_at: null,
+      ends_at: null,
+      round_index: 0,
+      total_rounds: null,
+      mystery_iso: null,
+      mystery_deck: null,
+      mystery_winner_user_id: null,
+      mystery_revealed_name: null,
+      mystery_round_started_at: null,
+    }).eq("id", got.game.id);
+    // reload after reset
+    const reset = await loadGameByCode(ctx.params.code);
+    if (reset) {
+      got.game = reset.game;
+      got.players = reset.players;
+      got.conquests = reset.conquests;
+    }
+  }
 
   const now = new Date();
   const admin = supabaseAdmin();
 
   if (got.game.mode === "conquest") {
     const endsAt = new Date(now.getTime() + got.game.duration_sec * 1000);
-    await admin.from("games")
+    const { error: uErr } = await admin.from("games")
       .update({ status: "playing", started_at: now.toISOString(), ends_at: endsAt.toISOString() })
       .eq("id", got.game.id);
+    if (uErr) {
+      console.error("[start] update games failed", uErr);
+      return bad(uErr.message, 500);
+    }
   } else {
     const total = Math.min(got.game.total_countries ?? 50, COUNTRIES.length);
     const deck = shuffle(COUNTRIES.map((c) => c.isoCode)).slice(0, total);
     const firstIso = deck[0];
     const endsAt = new Date(now.getTime() + got.game.duration_sec * 1000);
-    await admin.from("games").update({
+    const { error: uErr } = await admin.from("games").update({
       status: "playing",
       started_at: now.toISOString(),
       total_rounds: total,
@@ -53,6 +92,10 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
       mystery_winner_user_id: null,
       mystery_revealed_name: null,
     }).eq("id", got.game.id);
+    if (uErr) {
+      console.error("[start] update games failed", uErr);
+      return bad(uErr.message, 500);
+    }
   }
 
   // Fresh load + broadcast
