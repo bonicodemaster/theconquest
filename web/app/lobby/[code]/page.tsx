@@ -18,6 +18,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
 
   const username = useGameStore((s) => s.username);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
   // If the user landed here directly, attempt to join.
   useEffect(() => {
@@ -61,7 +62,6 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     void api.updateSettings(code, patch);
   };
 
-  const [starting, setStarting] = useState(false);
   const start = async () => {
     if (starting) return;
     setStarting(true);
