@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
@@ -10,26 +10,33 @@ export default function AnswerInput() {
   const [value, setValue] = useState("");
   const [flash, setFlash] = useState<"ok" | "bad" | null>(null);
   const [busy, setBusy] = useState(false);
-  const ref = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Re-focus the input whenever the room code resolves (after route hydration)
+  useEffect(() => {
+    if (code) inputRef.current?.focus();
+  }, [code]);
+
+  const submit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const guess = value.trim();
     if (!guess || !code || busy) return;
     setBusy(true);
-    const res = await api.submitGuess(code, guess);
-    setBusy(false);
-    if (res.ok && res.data.matched) {
-      setValue("");
-      setFlash("ok");
-    } else {
+    setValue("");
+    try {
+      const res = await api.submitGuess(code, guess);
+      setFlash(res.ok && res.data.matched ? "ok" : "bad");
+    } catch {
       setFlash("bad");
+    } finally {
+      setBusy(false);
+      inputRef.current?.focus();
+      window.setTimeout(() => setFlash(null), 250);
     }
-    window.setTimeout(() => setFlash(null), 250);
   };
 
   return (
-    <form onSubmit={submit} className="relative">
+    <form onSubmit={submit} className="relative shrink-0">
       <AnimatePresence>
         {flash && (
           <motion.span
@@ -44,15 +51,23 @@ export default function AnswerInput() {
         )}
       </AnimatePresence>
       <input
-        ref={ref}
+        ref={inputRef}
         autoFocus
         autoComplete="off"
         spellCheck={false}
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void submit();
+          }
+        }}
         placeholder="Type a country and press Enter…"
-        className="input text-lg font-medium"
+        className="input text-lg font-medium w-full"
       />
+      {/* Hidden submit button guarantees Enter triggers submit even in edge cases */}
+      <button type="submit" className="hidden" aria-hidden="true" tabIndex={-1} />
     </form>
   );
 }

@@ -103,22 +103,36 @@ export default function WorldMap({ countries, highlightIso, interactive = true }
         </ZoomableGroup>
       </ComposableMap>
 
-      {/* Hover tooltip */}
+      {/* Hover tooltip — never reveals the country name during active play */}
       <AnimatePresence>
-        {hover && (
-          <motion.div
-            key={hover.meta.isoCode}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="pointer-events-none fixed z-50 glass px-3 py-2 rounded-lg text-xs leading-tight"
-            style={{ left: hover.x + 14, top: hover.y + 14 }}
-          >
-            <div className="font-semibold text-white">{hover.meta.name}</div>
-            <div className="text-white/60">{hover.meta.capital} • {hover.meta.continent}</div>
-            <div className="text-white/60">{formatArea(hover.meta.areaKm2)}</div>
-          </motion.div>
-        )}
+        {hover && (() => {
+          const conqueredColor = colorByIso.get(hover.meta.isoCode);
+          const conquered = !!conqueredColor;
+          const reveal = state?.status !== "playing" || conquered;
+          return (
+            <motion.div
+              key={hover.meta.isoCode}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="pointer-events-none fixed z-50 glass px-3 py-2 rounded-lg text-xs leading-tight"
+              style={{ left: hover.x + 14, top: hover.y + 14 }}
+            >
+              {reveal ? (
+                <>
+                  <div className="font-semibold text-white">{hover.meta.name}</div>
+                  <div className="text-white/60">{hover.meta.capital} • {hover.meta.continent}</div>
+                  <div className="text-white/60">{formatArea(hover.meta.areaKm2)}</div>
+                </>
+              ) : (
+                <>
+                  <div className="font-semibold text-white">???</div>
+                  <div className="text-white/60">{hover.meta.continent}</div>
+                </>
+              )}
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Conquest splash */}

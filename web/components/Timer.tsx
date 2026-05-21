@@ -1,21 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useGameStore } from "@/store/gameStore";
 import { formatTime } from "@/lib/format";
 
-/** Displays remaining time with smooth 250ms client tick (server is source of truth). */
+/** Displays remaining time. Server `endsAt` is source of truth; client ticks for display. */
 export default function Timer({ endsAt }: { endsAt?: number }) {
-  const remainingMs = useGameStore((s) => s.remainingMs);
-  const [tick, setTick] = useState(remainingMs);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (!endsAt) return;
-    const id = setInterval(() => setTick(Math.max(0, endsAt - Date.now())), 250);
+    setNow(Date.now()); // refresh immediately when endsAt changes
+    const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
   }, [endsAt]);
 
-  const value = endsAt ? tick : remainingMs;
-  const danger = value < 10_000;
+  const value = endsAt ? Math.max(0, endsAt - now) : 0;
+  const danger = !!endsAt && value < 10_000;
 
   return (
     <div className={`glass rounded-2xl px-4 py-3 text-center ${danger ? "ring-1 ring-red-500/40" : ""}`}>
