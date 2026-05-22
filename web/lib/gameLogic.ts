@@ -28,6 +28,7 @@ export interface GameRow {
   max_players: number;
   is_private: boolean;
   total_countries: number | null;
+  region: string | null;
   host_user_id: string;
   started_at: string | null;
   ends_at: string | null;
@@ -65,6 +66,7 @@ export function settingsOf(g: GameRow): GameSettings {
     maxPlayers: g.max_players,
     isPrivate: g.is_private,
     totalCountries: g.total_countries as GameSettings["totalCountries"],
+    region: (g.region as GameSettings["region"]) ?? null,
   };
 }
 

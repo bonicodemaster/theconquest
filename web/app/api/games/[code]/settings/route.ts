@@ -31,6 +31,7 @@ export async function PATCH(req: Request, ctx: { params: { code: string } }) {
   if (p.data.maxPlayers !== undefined) patch.max_players = p.data.maxPlayers;
   if (p.data.isPrivate !== undefined) patch.is_private = p.data.isPrivate;
   if (p.data.totalCountries !== undefined) patch.total_countries = p.data.totalCountries;
+  if (p.data.region !== undefined) patch.region = p.data.region;
 
   if (Object.keys(patch).length === 0) return ok({ ok: true });
 

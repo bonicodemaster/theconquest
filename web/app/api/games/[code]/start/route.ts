@@ -5,6 +5,8 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { broadcast } from "@/lib/realtime";
 import { leaderboardFrom, publicState } from "@/lib/gameLogic";
 import { COUNTRIES } from "@/lib/countries";
+import { isosInRegion, REGIONS } from "@/lib/regions";
+import type { Region } from "@/types/shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,9 +103,13 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
   if (g.mode === "conquest") {
     updatePayload = { ends_at: endsAt };
   } else {
-    // Distinct countries only — a game never asks for the same country twice.
-    const isos = [...new Set(COUNTRIES.map((c) => c.isoCode))];
-    const total = Math.min(g.total_countries ?? 50, isos.length);
+    // A region locks the deck to its continent(s) (every country in them);
+    // otherwise the host's chosen count from the whole world. Unknown/legacy
+    // region values fall back to whole world. Distinct countries only — a game
+    // never asks for the same country twice.
+    const region = (REGIONS as readonly string[]).includes(g.region ?? "") ? (g.region as Region) : null;
+    const isos = [...new Set(region ? isosInRegion(region) : COUNTRIES.map((c) => c.isoCode))];
+    const total = region ? isos.length : Math.min(g.total_countries ?? 50, isos.length);
     const deck = shuffle(isos).slice(0, total);
     updatePayload = {
       ends_at: endsAt,

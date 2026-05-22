@@ -2,6 +2,8 @@
 export type GameMode = "conquest" | "mystery" | "capitals";
 export type Difficulty = "easy" | "normal";
 export type GameStatus = "lobby" | "playing" | "finished";
+/** Playable region filters for round-based modes (Asia + Oceania are merged). */
+export type Region = "Africa" | "Americas" | "Europe" | "AsiaOceania";
 
 export interface GameSettings {
   mode: GameMode;
@@ -10,6 +12,12 @@ export interface GameSettings {
   maxPlayers: number;
   isPrivate: boolean;
   totalCountries?: 20 | 50 | 100 | 196;
+  /**
+   * Round-based modes only (Pays Mystère + Capitales). null = whole world
+   * (default); a continent restricts the round deck to that continent's
+   * countries — and the round count becomes all of them.
+   */
+  region?: Region | null;
 }
 
 export interface Player {

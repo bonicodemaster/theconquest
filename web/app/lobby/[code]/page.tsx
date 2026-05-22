@@ -6,7 +6,8 @@ import { getUserId } from "@/lib/identity";
 import { useGameRealtime } from "@/lib/useGameRealtime";
 import { useGameStore } from "@/store/gameStore";
 import Chat from "@/components/Chat";
-import type { Difficulty, GameMode, GameSettings } from "@/types/shared";
+import { REGIONS, REGION_LABEL_FR, REGION_COUNT } from "@/lib/regions";
+import type { Difficulty, GameSettings, Region } from "@/types/shared";
 
 export default function LobbyPage({ params }: { params: { code: string } }) {
   const { code } = params;
@@ -83,6 +84,8 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const isHost = me?.userId === state.hostId;
   const settings: GameSettings = { ...state.settings, ...optimistic };
   const slots = Math.max(settings.maxPlayers, state.players.length);
+  // Mode is chosen on the home screen at creation — shown read-only here.
+  const modeLabel = settings.mode === "conquest" ? "Conquête" : settings.mode === "capitals" ? "Capitales" : "Pays Mystère";
 
   const updateSettings = async (patch: Partial<GameSettings>) => {
     setOptimistic((prev) => ({ ...prev, ...patch }));
@@ -139,7 +142,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
       {/* Header */}
       <header className="flex items-center justify-between px-6 md:px-10 py-4 border-b border-line">
         <div className="flex items-baseline gap-4">
-          <span className="text-[12px] text-mute">Lobby</span>
+          <span className="text-[12px] text-mute">Lobby · {modeLabel}</span>
           <span className="font-serif text-3xl font-black tracking-[0.12em]">{state.code}</span>
         </div>
         <div className="flex items-center gap-5">
@@ -154,18 +157,6 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
         {/* Settings */}
         <section className="pav-card p-6 md:p-8 space-y-6">
           <h2 className="pav-label">Configuration de la partie</h2>
-
-          <Field label="Mode de jeu">
-            <Segmented<GameMode>
-              value={settings.mode}
-              options={[{ v: "conquest", l: "Conquête" }, { v: "mystery", l: "Mystère" }, { v: "capitals", l: "Capitales" }]}
-              disabled={!isHost}
-              onChange={(mode) =>
-                updateSettings(mode === "conquest"
-                  ? { mode, durationSec: 300 }
-                  : { mode, durationSec: 20, totalCountries: 50 })}
-            />
-          </Field>
 
           {settings.mode === "conquest" ? (
             <Field label="Durée de la partie">
@@ -186,14 +177,34 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
                   onChange={(v) => updateSettings({ durationSec: v })}
                 />
               </Field>
-              <Field label="Nombre de pays">
-                <Segmented<number>
-                  value={settings.totalCountries ?? 50}
-                  options={[{ v: 20, l: "20" }, { v: 50, l: "50" }, { v: 100, l: "100" }, { v: 196, l: "Tous" }]}
+              <Field label="Région">
+                <Segmented<string>
+                  value={settings.region ?? "world"}
+                  options={[
+                    { v: "world", l: "Monde" },
+                    ...REGIONS.map((r) => ({ v: r as string, l: REGION_LABEL_FR[r] })),
+                  ]}
                   disabled={!isHost}
-                  onChange={(v) => updateSettings({ totalCountries: v as 20 | 50 | 100 | 196 })}
+                  onChange={(v) => updateSettings({ region: v === "world" ? null : (v as Region) })}
                 />
               </Field>
+              {settings.region ? (
+                // Region-locked: the count is fixed to the whole continent.
+                <Field label="Nombre de pays">
+                  <div className="border border-line rounded-xl px-3 py-2.5 text-xs font-semibold text-mute bg-panel-soft">
+                    Tous les {REGION_COUNT[settings.region]} pays d'{REGION_LABEL_FR[settings.region]}
+                  </div>
+                </Field>
+              ) : (
+                <Field label="Nombre de pays">
+                  <Segmented<number>
+                    value={settings.totalCountries ?? 50}
+                    options={[{ v: 20, l: "20" }, { v: 50, l: "50" }, { v: 100, l: "100" }, { v: 196, l: "Tous" }]}
+                    disabled={!isHost}
+                    onChange={(v) => updateSettings({ totalCountries: v as 20 | 50 | 100 | 196 })}
+                  />
+                </Field>
+              )}
             </>
           )}
 

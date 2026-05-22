@@ -55,6 +55,15 @@ export default function GamePage({ params }: { params: { code: string } }) {
   // Anti-spam: reset the per-round wrong-guess count when the mystery round changes.
   useEffect(() => { setWrongCount(0); }, [state?.round?.index, state?.settings.mode]);
 
+  // Keep the answer bar focused across rounds. The input is disabled during the
+  // between-round reveal pause (and when out of tries), which drops browser focus
+  // — so re-focus it the moment a fresh round re-enables it.
+  useEffect(() => {
+    const isRound = state ? state.settings.mode !== "conquest" : false;
+    const locked = isRound && (!!state?.round?.revealedName || wrongCount >= MAX_WRONG_MYSTERY);
+    if (!locked) inputRef.current?.focus();
+  }, [state?.round?.index, state?.round?.revealedName, state?.settings.mode, wrongCount]);
+
   // Auto-route based on server status (covers missed broadcasts).
   useEffect(() => {
     if (!state) return;

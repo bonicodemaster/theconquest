@@ -24,10 +24,12 @@ export default function Home() {
   const createGame = async () => {
     setError(null);
     setBusy(true);
+    // Default to a PRIVATE room so nobody can wander in while the host is still
+    // configuring; the host can flip it to public from the lobby.
     const settings: GameSettings =
       mode === "conquest"
-        ? { mode, durationSec: 300, difficulty: "easy", maxPlayers: 12, isPrivate: false }
-        : { mode, durationSec: 20, difficulty: "easy", maxPlayers: 12, isPrivate: false, totalCountries: 50 };
+        ? { mode, durationSec: 300, difficulty: "easy", maxPlayers: 12, isPrivate: true }
+        : { mode, durationSec: 20, difficulty: "easy", maxPlayers: 12, isPrivate: true, totalCountries: 50 };
     setStoreName(name);
     const res = await api.createGame({ username: name, settings });
     setBusy(false);

@@ -77,6 +77,7 @@ export const settingsSchema = z.object({
   maxPlayers: z.number().int().min(2).max(30),
   isPrivate: z.boolean(),
   totalCountries: z.union([z.literal(20), z.literal(50), z.literal(100), z.literal(196)]).optional(),
+  region: z.enum(["Africa", "Americas", "Europe", "AsiaOceania"]).nullable().optional(),
 });
 
 // Token-bucket per (userId, key). In-memory per Vercel instance — best-effort.

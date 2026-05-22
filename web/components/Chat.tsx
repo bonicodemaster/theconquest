@@ -9,10 +9,14 @@ export default function Chat() {
   const code = (params?.code ?? "").toUpperCase();
   const messages = useGameStore((s) => s.chat);
   const [text, setText] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
+  // Pin the chat to its latest message by scrolling its OWN container — never
+  // the page. (scrollIntoView scrolls every ancestor incl. the window, which
+  // yanked the whole lobby to the bottom on entry.)
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
   const send = async (e: React.FormEvent) => {
@@ -26,7 +30,7 @@ export default function Chat() {
   return (
     <div className="pav-card flex flex-col min-h-0 overflow-hidden">
       <div className="px-4 py-2.5 pav-label border-b border-line">Discussion</div>
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 text-sm">
+      <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 text-sm">
         {messages.map((m) => (
           <div key={m.id} className="leading-snug">
             <span className="font-bold" style={{ color: m.color }}>
@@ -35,7 +39,6 @@ export default function Chat() {
             <span className="text-ink/80">{m.text}</span>
           </div>
         ))}
-        <div ref={endRef} />
       </div>
       <form onSubmit={send} className="p-2 border-t border-line">
         <input
