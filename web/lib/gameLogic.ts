@@ -15,6 +15,9 @@ import type {
   GameMode,
 } from "@/types/shared";
 
+/** How long the correct answer stays revealed between Pays Mystère rounds (ms). */
+export const MYSTERY_REVEAL_MS = 3000;
+
 export interface GameRow {
   id: string;
   code: string;
@@ -87,8 +90,9 @@ export function publicState(
     conqueredAt: new Date(c.conquered_at).getTime(),
   }));
 
+  // Both round-based modes (Pays Mystère + Capitales) expose a round.
   const round: MysteryRound | undefined =
-    g.mode === "mystery" && g.mystery_iso && g.mystery_round_started_at && g.ends_at
+    g.mode !== "conquest" && g.mystery_iso && g.mystery_round_started_at && g.ends_at
       ? {
           index: g.round_index,
           isoCode: g.mystery_iso,
@@ -143,7 +147,7 @@ export function leaderboardFrom(
       score: p.score,
     };
   });
-  return mode === "conquest"
-    ? entries.sort((a, b) => b.totalAreaKm2 - a.totalAreaKm2)
-    : entries.sort((a, b) => b.score - a.score);
+  // Both modes now rank by points (score). Area is only a tiebreaker / a
+  // secondary stat — conquering Russia + China no longer auto-wins.
+  return entries.sort((a, b) => b.score - a.score || b.totalAreaKm2 - a.totalAreaKm2);
 }

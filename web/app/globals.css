@@ -2,45 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------- Pavillon · Apple-soft base ---------------- */
 :root {
-  --bg: #06070a;
-  --bg-soft: #0b0d12;
-  --border: rgba(255, 255, 255, 0.08);
+  --paper: #faf7f0;
+  --panel: #ffffff;
+  --ink: #1c1c1e;
+  --mute: #86827b;
+  --line: rgba(28, 28, 30, 0.10);
+  --accent: #d4541c;
 }
 
-html, body { background: var(--bg); color: #e6e8ee; }
-body { font-family: var(--font-body), system-ui, sans-serif; }
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+}
+body {
+  font-family: var(--font-sans), "Inter Tight", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--accent); color: #fff; }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.18); }
+::-webkit-scrollbar-thumb { background: rgba(28, 28, 30, 0.16); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(28, 28, 30, 0.28); }
 
-.bg-grid {
-  background-image:
-    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 36px 36px;
+/* ---------------- Soft primitives ---------------- */
+@layer components {
+  /* Quiet sentence-case caption (mono is reserved for raw numbers now). */
+  .pav-label {
+    @apply font-sans text-[11px] font-medium tracking-normal text-mute;
+  }
+  /* Hairline rule. */
+  .pav-rule { @apply h-px bg-line; }
+  .pav-rule-thick { @apply h-px bg-line; }
+
+  /* Rounded white card with a soft shadow — the workhorse container. */
+  .pav-card { @apply bg-panel border border-line rounded-2xl shadow-soft; }
+
+  .pav-input {
+    @apply w-full bg-panel border border-line rounded-xl px-4 py-3 text-ink
+           outline-none transition-shadow placeholder:text-mute/70
+           focus:border-line-strong focus:shadow-soft;
+  }
+
+  .pav-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full
+           font-sans font-semibold tracking-normal px-5 py-2.5
+           transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed
+           cursor-pointer select-none;
+  }
+  .pav-btn-primary { @apply pav-btn bg-accent text-white shadow-soft hover:bg-accent-deep hover:shadow-elevated; }
+  .pav-btn-ghost   { @apply pav-btn bg-panel text-ink border border-line hover:bg-panel-soft; }
+  .pav-btn-lg      { @apply px-7 py-4 text-lg; }
+
+  /* ---- Back-compat: legacy classes mapped onto the soft palette. ---- */
+  .glass { @apply pav-card; }
+  .label { @apply pav-label; }
+  .input { @apply pav-input; }
+  .btn        { @apply pav-btn; }
+  .btn-primary { @apply pav-btn-primary; }
+  .btn-ghost   { @apply pav-btn-ghost; }
+  .btn-danger  { @apply pav-btn bg-accent text-white shadow-soft hover:bg-accent-deep; }
 }
 
-.glass {
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-  border: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-}
+/* Tabular numerals everywhere a score/timer is shown. */
+.tnum { font-variant-numeric: tabular-nums; }
 
-.btn {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl font-semibold
-         transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
-}
-.btn-primary { @apply btn bg-brand-500 hover:bg-brand-400 text-white shadow-glow; }
-.btn-ghost   { @apply btn bg-white/5 hover:bg-white/10 text-white border border-white/10; }
-.btn-danger  { @apply btn bg-red-500/90 hover:bg-red-500 text-white; }
+/* Smooth the auto-zoom onto the mystery country (manual zoom is disabled). */
+.rsm-zoomable-group { transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
 
-.input {
-  @apply w-full px-4 py-2 rounded-xl bg-ink-800 border border-white/10
-         focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 outline-none
-         placeholder:text-white/30 text-white;
+/* Pulsing halo on the mystery locator pin (tiny / off-map countries). */
+@keyframes wmPinPulse {
+  0% { opacity: 0.3; transform: scale(0.6); }
+  70% { opacity: 0; transform: scale(2.4); }
+  100% { opacity: 0; transform: scale(2.4); }
 }
-
-.label { @apply text-xs uppercase tracking-wider text-white/50 font-medium; }
+.wm-pin-pulse { transform-box: fill-box; transform-origin: center; animation: wmPinPulse 1.5s ease-out infinite; }

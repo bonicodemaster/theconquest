@@ -20,8 +20,8 @@ for (const c of COUNTRIES) {
   }
 }
 
-/** Levenshtein distance — O(n*m) but country names are short. */
-function levenshtein(a: string, b: string): number {
+/** Levenshtein distance — O(n*m) but country/capital names are short. */
+export function levenshtein(a: string, b: string): number {
   if (a === b) return 0;
   if (!a.length) return b.length;
   if (!b.length) return a.length;

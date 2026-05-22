@@ -1,5 +1,6 @@
 import { COUNTRIES } from "@/lib/countries";
 import { nameFr, continentFr } from "@/lib/countriesFr";
+import { basePoints, difficultyOf } from "@/lib/difficulty";
 
 // Pure, input-free GET → let Next statically generate it at build time and
 // serve from the CDN. (Edge runtime would disable that static generation.)
@@ -14,6 +15,8 @@ export async function GET() {
       capital: c.capital,
       continent: continentFr(c.continent),
       areaKm2: c.areaKm2,
+      difficulty: difficultyOf(c.isoCode),
+      points: basePoints(c.isoCode),
     })),
     { headers: { "cache-control": "public, max-age=3600, s-maxage=86400" } }
   );

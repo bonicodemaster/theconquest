@@ -24,24 +24,24 @@ export default function Chat() {
   };
 
   return (
-    <div className="glass rounded-2xl flex flex-col min-h-0 overflow-hidden">
-      <div className="px-4 py-2 label border-b border-white/5">Discussion</div>
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 text-sm">
+    <div className="pav-card flex flex-col min-h-0 overflow-hidden">
+      <div className="px-4 py-2.5 pav-label border-b border-line">Discussion</div>
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 text-sm">
         {messages.map((m) => (
           <div key={m.id} className="leading-snug">
-            <span className="font-semibold" style={{ color: m.color }}>
-              {m.username}:
+            <span className="font-bold" style={{ color: m.color }}>
+              {m.username}
             </span>{" "}
-            <span className="text-white/80">{m.text}</span>
+            <span className="text-ink/80">{m.text}</span>
           </div>
         ))}
         <div ref={endRef} />
       </div>
-      <form onSubmit={send} className="p-2 border-t border-white/5">
+      <form onSubmit={send} className="p-2 border-t border-line">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="input"
+          className="pav-input border-0 rounded-none bg-transparent px-2 py-1.5 focus:shadow-none"
           maxLength={280}
           placeholder="Écris un message…"
         />

@@ -1,5 +1,5 @@
 // Mirror of server/src/types/shared.ts — keep in sync.
-export type GameMode = "conquest" | "mystery";
+export type GameMode = "conquest" | "mystery" | "capitals";
 export type Difficulty = "easy" | "normal";
 export type GameStatus = "lobby" | "playing" | "finished";
 
@@ -55,6 +55,18 @@ export interface MysteryRound {
   endsAt: number;
   winnerId?: string;
   revealedName?: string;
+}
+
+/** Per-country metadata served by /api/countries (FR names, difficulty, points). */
+export interface CountryMeta {
+  isoCode: string;
+  numericId: string;
+  name: string;
+  capital: string;
+  continent: string;
+  areaKm2: number;
+  difficulty: number;
+  points: number;
 }
 
 export interface PublicGameState {

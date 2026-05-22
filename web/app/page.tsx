@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { useGameStore } from "@/store/gameStore";
 import { username as suggestUsername } from "@/lib/format";
@@ -48,39 +47,44 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-5xl grid md:grid-cols-2 gap-8 items-center">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="inline-block px-3 py-1 text-[11px] font-bold uppercase tracking-widest rounded-full bg-brand-500/20 text-brand-400 mb-4">
-            multijoueur en temps réel · géographie
-          </div>
-          <h1 className="font-display text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
-            World{" "}
-            <span className="bg-gradient-to-r from-brand-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">
-              Conquest
-            </span>{" "}
-            Quiz
-          </h1>
-          <p className="mt-4 text-white/60 max-w-md">
-            Tape les noms de pays plus vite que tes adversaires. Conquiers la carte,
-            gravis le classement, domine le monde.
-          </p>
-        </motion.div>
+    <main className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 md:px-10 py-5 border-b border-line">
+        <div className="flex items-center gap-2.5 font-mono text-[11px] tracking-[0.18em]">
+          <span className="w-2.5 h-2.5 rounded-full bg-accent" />
+          World · Conquest · Quiz
+        </div>
+        <div className="text-[12px] text-mute">
+          Géographie · temps réel
+        </div>
+      </header>
 
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="glass rounded-3xl p-6 space-y-5"
-        >
+      <div className="flex-1 grid lg:grid-cols-[1.2fr_1fr]">
+        {/* LEFT — hero */}
+        <section className="px-8 md:px-14 py-12 md:py-16 flex flex-col gap-8 lg:border-r border-line">
+          <div className="pav-label">Multijoueur en temps réel</div>
+          <h1 className="font-serif font-black leading-[0.9] tracking-tight text-6xl md:text-8xl">
+            Conquiers<br />le monde,<br /><span className="text-accent">vite.</span>
+          </h1>
+          <p className="max-w-md text-base md:text-lg leading-relaxed text-ink/80">
+            Tape le nom d'un pays avant les autres. Verrouille le territoire.
+            Plus le pays est dur à trouver, plus il rapporte. Domine la carte
+            avant la fin du chrono.
+          </p>
+
+          <div className="mt-auto flex gap-12 text-[11px] text-mute">
+            <div><div className="font-serif text-3xl text-ink font-bold">196</div>Pays</div>
+            <div><div className="font-serif text-3xl text-ink font-bold">3–50</div>Pts / pays</div>
+            <div><div className="font-serif text-3xl text-ink font-bold">2–30</div>Joueurs</div>
+          </div>
+        </section>
+
+        {/* RIGHT — console */}
+        <section className="px-8 md:px-12 py-12 md:py-16 flex flex-col gap-7 justify-center">
           <div>
-            <label className="label">Votre nom</label>
+            <div className="pav-label mb-2">Ton nom</div>
             <input
-              className="input mt-1"
+              className="pav-input text-lg font-semibold"
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={20}
@@ -88,46 +92,52 @@ export default function Home() {
           </div>
 
           <div>
-            <label className="label">Mode</label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              {(["conquest", "mystery"] as GameMode[]).map((m) => (
+            <div className="pav-label mb-2">Mode de jeu</div>
+            <div className="grid grid-cols-3 border border-line rounded-xl overflow-hidden">
+              {(["conquest", "mystery", "capitals"] as GameMode[]).map((m, i) => (
                 <button
-                  type="button"
                   key={m}
+                  type="button"
                   onClick={() => setMode(m)}
-                  className={`btn ${mode === m ? "btn-primary" : "btn-ghost"}`}
+                  className={`px-2 py-3.5 text-sm font-semibold whitespace-nowrap transition-colors ${
+                    i < 2 ? "border-r border-line" : ""
+                  } ${mode === m ? "bg-ink text-paper" : "bg-panel text-ink hover:bg-panel-soft"}`}
                 >
-                  {m === "conquest" ? "🌎 Conquête" : "🎯 Mystère"}
+                  {m === "conquest" ? "Conquête" : m === "mystery" ? "Mystère" : "Capitales"}
                 </button>
               ))}
             </div>
           </div>
 
-          <button onClick={createGame} disabled={busy || !name} className="btn-primary w-full text-base py-3">
-            {busy ? "Création…" : "Créer une partie"}
+          <button
+            onClick={createGame}
+            disabled={busy || !name}
+            className="pav-btn-primary pav-btn-lg w-full"
+          >
+            {busy ? "Création…" : "Créer une partie ↗"}
           </button>
 
-          <div className="flex items-center gap-3 text-xs text-white/40">
-            <span className="flex-1 h-px bg-white/10" />
-            ou rejoindre une partie
-            <span className="flex-1 h-px bg-white/10" />
+          <div className="flex items-center gap-4 text-[11px] text-mute">
+            <span className="flex-1 pav-rule" />
+            ou rejoindre
+            <span className="flex-1 pav-rule" />
           </div>
 
           <div className="flex gap-2">
             <input
-              className="input font-mono uppercase tracking-widest"
-              placeholder="CODE DU SALON"
+              className="pav-input font-mono uppercase tracking-[0.3em] text-lg font-bold text-center"
+              placeholder="CODE"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               maxLength={6}
             />
-            <button onClick={joinGame} disabled={busy || !code || !name} className="btn-ghost">
+            <button onClick={joinGame} disabled={busy || !code || !name} className="pav-btn-ghost px-6">
               {busy ? "…" : "Rejoindre"}
             </button>
           </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
-        </motion.div>
+          {error && <p className="text-sm text-accent font-medium">{error}</p>}
+        </section>
       </div>
     </main>
   );

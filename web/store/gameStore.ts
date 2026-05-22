@@ -18,9 +18,25 @@ interface GameStore {
   remainingMs: number;
   setRemaining: (n: number) => void;
 
-  /** Recent conquest events for animation triggers */
-  lastConquest: { isoCode: string; color: string; username: string; at: number } | null;
-  setLastConquest: (c: GameStore["lastConquest"]) => void;
+  /** Most recent conquest — drives the map glow + capture flash. */
+  lastConquest: ConquestEvent | null;
+  setLastConquest: (c: ConquestEvent | null) => void;
+
+  /** Rolling feed of recent conquests (newest first) for the toast strip. */
+  conquestFeed: ConquestEvent[];
+  pushConquest: (c: ConquestEvent) => void;
+  resetConquestFeed: () => void;
+}
+
+export interface ConquestEvent {
+  isoCode: string;
+  color: string;
+  username: string;
+  name: string;
+  points: number;
+  difficulty: number;
+  isMe: boolean;
+  at: number;
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -62,4 +78,8 @@ export const useGameStore = create<GameStore>((set) => ({
 
   lastConquest: null,
   setLastConquest: (c) => set({ lastConquest: c }),
+
+  conquestFeed: [],
+  pushConquest: (c) => set((s) => ({ conquestFeed: [c, ...s.conquestFeed].slice(0, 8) })),
+  resetConquestFeed: () => set({ conquestFeed: [] }),
 }));

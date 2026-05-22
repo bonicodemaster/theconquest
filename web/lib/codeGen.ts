@@ -14,10 +14,11 @@ export const newId = customAlphabet(
   16
 );
 
+// "Pavillon" player palette — coral, ocean, forest, mustard, plum, teal, then
+// muted editorial variants for larger rooms. All read cleanly on cream paper.
 export const PLAYER_COLORS = [
-  "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#a855f7",
-  "#14b8a6", "#eab308",
+  "#d4541c", "#2a5f8d", "#3d6b3a", "#b88a2a", "#6b3a5f", "#2a7a7a",
+  "#a23b2e", "#3f5e8c", "#7a6a2a", "#5a4a7a", "#2f6b55", "#8a5a2a",
 ];
 
 export const HOST_COLOR = PLAYER_COLORS[0];

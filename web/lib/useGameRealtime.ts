@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "./supabase/client";
 import { channelName, type RoomEvent } from "./realtime";
 import { useGameStore } from "@/store/gameStore";
+import { getUserId } from "./identity";
 import { api } from "./api";
 
 /**
@@ -16,6 +17,8 @@ export function useGameRealtime(code?: string) {
   const setLb = useGameStore((s) => s.setLeaderboard);
   const pushChat = useGameStore((s) => s.pushChat);
   const setLast = useGameStore((s) => s.setLastConquest);
+  const pushConquest = useGameStore((s) => s.pushConquest);
+  const resetFeed = useGameStore((s) => s.resetConquestFeed);
 
   useEffect(() => {
     if (!code) return;
@@ -55,11 +58,23 @@ export function useGameRealtime(code?: string) {
     on("state", (s) => setState(s));
     on("leaderboard_updated", (l) => setLb(l));
     on("chat_message", (m) => pushChat(m));
-    on("country_conquered", (c) =>
-      setLast({ isoCode: c.isoCode, color: c.color, username: c.username, at: Date.now() })
-    );
+    on("country_conquered", (c) => {
+      const ev = {
+        isoCode: c.isoCode,
+        color: c.color,
+        username: c.username,
+        name: c.name,
+        points: c.points,
+        difficulty: c.difficulty,
+        isMe: c.playerId === getUserId(),
+        at: Date.now() + Math.random(),
+      };
+      setLast(ev);
+      pushConquest(ev);
+    });
     on("mystery_new_round", () => setLast(null));
     on("game_started", (st) => {
+      resetFeed();
       setState(st);
       router.push(`/game/${code}`);
     });
@@ -76,5 +91,5 @@ export function useGameRealtime(code?: string) {
       clearInterval(pollId);
       supabaseBrowser().removeChannel(ch);
     };
-  }, [code, router, setState, setLb, pushChat, setLast]);
+  }, [code, router, setState, setLb, pushChat, setLast, pushConquest, resetFeed]);
 }

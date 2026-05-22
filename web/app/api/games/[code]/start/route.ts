@@ -66,25 +66,51 @@ export async function POST(req: Request, ctx: { params: { code: string } }) {
   const now = new Date();
   const admin = supabaseAdmin();
 
-  // Build the update payload, then PATCH with RETURNING so we don't need
-  // a second read (which can hit a stale read replica).
+  // Step 1 — atomically claim the start (only succeeds from 'lobby'). The
+  // RETURNING row reflects the LATEST committed settings on the primary, so a
+  // duration the host just changed can't be lost to read-replica lag (the
+  // cause of "I picked 1 min but it ran 5 min" bugs).
+  const claim = await admin
+    .from("games")
+    .update({ status: "playing", started_at: now.toISOString() })
+    .eq("id", got.game.id)
+    .eq("status", "lobby")
+    .select("*");
+  if (claim.error) { console.error("[start] claim failed", claim.error); return bad(claim.error.message, 500); }
+  if (!claim.data || claim.data.length === 0) {
+    // Lost the race (already started/finished) — report the true status so the
+    // client routes correctly instead of forcing a stale start.
+    const cur = await loadGameByCode(ctx.params.code);
+    if (cur && cur.game.status !== "lobby") {
+      const state = publicState(cur.game, cur.players, cur.conquests);
+      const lb = leaderboardFrom(cur.players, cur.conquests, cur.game.mode);
+      await broadcast(ctx.params.code, [
+        { type: "game_started", payload: state },
+        { type: "state", payload: state },
+        { type: "leaderboard_updated", payload: lb },
+      ]);
+      return ok({ ok: true, state, leaderboard: lb });
+    }
+    return bad("Impossible de démarrer la partie", 409);
+  }
+
+  // Step 2 — compute the time/round fields from the authoritative row.
+  const g = claim.data[0] as typeof got.game;
+  const endsAt = new Date(now.getTime() + g.duration_sec * 1000).toISOString();
   let updatePayload: Record<string, unknown>;
-  if (got.game.mode === "conquest") {
-    const endsAt = new Date(now.getTime() + got.game.duration_sec * 1000);
-    updatePayload = { status: "playing", started_at: now.toISOString(), ends_at: endsAt.toISOString() };
+  if (g.mode === "conquest") {
+    updatePayload = { ends_at: endsAt };
   } else {
-    const total = Math.min(got.game.total_countries ?? 50, COUNTRIES.length);
-    const deck = shuffle(COUNTRIES.map((c) => c.isoCode)).slice(0, total);
-    const firstIso = deck[0];
-    const endsAt = new Date(now.getTime() + got.game.duration_sec * 1000);
+    // Distinct countries only — a game never asks for the same country twice.
+    const isos = [...new Set(COUNTRIES.map((c) => c.isoCode))];
+    const total = Math.min(g.total_countries ?? 50, isos.length);
+    const deck = shuffle(isos).slice(0, total);
     updatePayload = {
-      status: "playing",
-      started_at: now.toISOString(),
+      ends_at: endsAt,
       total_rounds: total,
       mystery_deck: deck,
-      mystery_iso: firstIso,
+      mystery_iso: deck[0],
       mystery_round_started_at: now.toISOString(),
-      ends_at: endsAt.toISOString(),
       round_index: 0,
       mystery_winner_user_id: null,
       mystery_revealed_name: null,

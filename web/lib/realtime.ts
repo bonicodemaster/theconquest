@@ -23,7 +23,7 @@ export type RoomEvent =
   | { type: "state";                payload: PublicGameState }
   | { type: "player_joined";        payload: Player }
   | { type: "player_left";          payload: { playerId: string } }
-  | { type: "country_conquered";    payload: ConqueredCountry & { username: string; color: string } }
+  | { type: "country_conquered";    payload: ConqueredCountry & { username: string; color: string; name: string; points: number; difficulty: number } }
   | { type: "leaderboard_updated";  payload: LeaderboardEntry[] }
   | { type: "chat_message";         payload: ChatMessage }
   | { type: "mystery_new_round";    payload: MysteryRound }

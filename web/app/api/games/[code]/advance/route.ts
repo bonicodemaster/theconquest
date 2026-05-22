@@ -3,8 +3,10 @@ import {
 } from "../../../_lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { broadcast } from "@/lib/realtime";
-import { leaderboardFrom, publicState } from "@/lib/gameLogic";
+import { leaderboardFrom, publicState, MYSTERY_REVEAL_MS } from "@/lib/gameLogic";
 import { BY_ISO } from "@/lib/countries";
+import { nameFr } from "@/lib/countriesFr";
+import { capitalFr } from "@/lib/capitals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,24 +51,50 @@ export async function POST(_req: Request, ctx: { params: { code: string } }) {
     return ok({ ok: true });
   }
 
-  // --- Mystery: end round, then either start next or finish ---
+  // --- Mystery: active round → 3s answer reveal → next round / finish ---
+  const ended = !!got.game.ends_at && new Date(got.game.ends_at) <= now;
+  if (!ended) return ok({ ok: true }); // round (or reveal pause) still running
+
+  const revealed = !!got.game.mystery_revealed_name;
+
+  // Phase 1 — an active round just ran out with nobody winning: reveal the
+  // answer for MYSTERY_REVEAL_MS before moving on. (Winners already entered the
+  // reveal phase in the guess route, which set revealed + a short ends_at.)
+  if (!revealed) {
+    const iso = got.game.mystery_iso;
+    const name = iso
+      ? (got.game.mode === "capitals"
+          ? capitalFr(iso) || iso
+          : nameFr(iso, BY_ISO[iso]?.name ?? "") || iso)
+      : null;
+    const revealEnds = new Date(now.getTime() + MYSTERY_REVEAL_MS).toISOString();
+    const { data: claimed } = await admin
+      .from("games")
+      .update({ mystery_revealed_name: name, ends_at: revealEnds })
+      .eq("id", got.game.id)
+      .eq("round_index", got.game.round_index)
+      .is("mystery_revealed_name", null)
+      .select("id")
+      .maybeSingle();
+    if (!claimed) return ok({ ok: true }); // another client opened the reveal
+
+    const fresh = await loadGameByCode(ctx.params.code);
+    if (fresh) {
+      const state = publicState(fresh.game, fresh.players, fresh.conquests);
+      const lb = leaderboardFrom(fresh.players, fresh.conquests, "mystery");
+      await broadcast(ctx.params.code, [
+        { type: "state", payload: state },
+        { type: "leaderboard_updated", payload: lb },
+        ...(state.round ? [{ type: "mystery_round_ended" as const, payload: state.round }] : []),
+      ]);
+    }
+    return ok({ ok: true });
+  }
+
+  // Phase 2 — the reveal window elapsed: start the next round or finish.
   const deck = got.game.mystery_deck ?? [];
   const nextIndex = got.game.round_index + 1;
   const finished = nextIndex >= (got.game.total_rounds ?? deck.length);
-
-  // Reveal name if no winner yet & timer up
-  const timedOut = got.game.ends_at && new Date(got.game.ends_at) <= now && !got.game.mystery_winner_user_id;
-  if (timedOut && got.game.mystery_iso) {
-    await admin.from("games")
-      .update({ mystery_revealed_name: BY_ISO[got.game.mystery_iso]?.name ?? null })
-      .eq("id", got.game.id)
-      .is("mystery_winner_user_id", null);
-  }
-
-  // Only advance once we're sure the round is over (winner or timer up).
-  const roundOver =
-    !!got.game.mystery_winner_user_id || timedOut;
-  if (!roundOver) return ok({ ok: true });
 
   if (finished) {
     const { data: claimed } = await admin
@@ -91,7 +119,8 @@ export async function POST(_req: Request, ctx: { params: { code: string } }) {
         mystery_revealed_name: null,
       })
       .eq("id", got.game.id)
-      .eq("round_index", got.game.round_index)   // optimistic check
+      .eq("round_index", got.game.round_index) // advance exactly once from this round
+      .not("mystery_revealed_name", "is", null)
       .select("id")
       .maybeSingle();
     if (!claimed) return ok({ ok: true });

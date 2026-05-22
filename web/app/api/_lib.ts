@@ -71,7 +71,7 @@ export async function emitState(code: string, opts: { withLeaderboard?: boolean;
 export const usernameSchema = z.string().trim().min(2).max(20).regex(/^[\p{L}\p{N}_\-. ]+$/u);
 export const codeSchema = z.string().regex(/^[A-Z0-9]{6}$/);
 export const settingsSchema = z.object({
-  mode: z.enum(["conquest", "mystery"]),
+  mode: z.enum(["conquest", "mystery", "capitals"]),
   durationSec: z.number().int().positive().max(60 * 30),
   difficulty: z.enum(["easy", "normal"]),
   maxPlayers: z.number().int().min(2).max(30),
