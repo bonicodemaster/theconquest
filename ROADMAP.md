@@ -1,7 +1,7 @@
 # 🗺️ Project Roadmap — World Conquest Quiz
 
 Living document. Update after every shipped feature.
-Last update: 2026-05-21 · Status: **MVP refactored for Vercel + Supabase, ready to deploy after first smoke test**.
+Last update: 2026-05-22 · Status: **🟢 Live in production on Vercel + Supabase** (auto-deploys from `main`).
 
 Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to-have
 
@@ -13,7 +13,7 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 |---|---|---|
 | Monorepo + tooling | ✅ | `web/` (Next.js) is the only deploy target; `server/` is legacy |
 | Country data (196 countries) | ✅ | 193 UN + Vatican + Kosovo + Taiwan |
-| Postgres schema (Supabase) | ✅ | `supabase/migrations/0001_init.sql` |
+| Postgres schema (Supabase) | ✅ | migrations `0001_init`, `0002_mode_text`, `0003_region` (all applied) |
 | API routes (stateless, Vercel-ready) | ✅ | full Socket parity in `web/app/api/games/**` |
 | Realtime transport (Supabase Broadcast) | ✅ | `lib/realtime.ts` + `useGameRealtime` hook |
 | Client refactor (no Socket.io) | ✅ | all pages + components use `api` + `useGameRealtime` |
@@ -22,7 +22,11 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 | Real-time chat | ✅ | rate-limited per (user, key) |
 | Auth | 🟡 | guest-only (UUID in localStorage, sent as `x-user-id`) |
 | Tests | 🟡 | normalize unit tests; no integration tests against API routes yet |
-| Deploy | 🔵 | guide written ([DEPLOYMENT_VERCEL.md](DEPLOYMENT_VERCEL.md)); not yet provisioned |
+| Deploy | ✅ | **live in production**; Vercel auto-deploys `main`, Supabase provisioned + migrated |
+| Visual design (Pavillon / Apple-soft) | ✅ | warm-white, hairline borders, rounded, pill buttons — `tailwind.config.ts` + `globals.css` |
+| Game modes | ✅ | Conquête + Pays Mystère + Capitales |
+| Difficulty scoring (Conquête) | ✅ | 5 tiers → 3/8/18/32/50 pts, points-ranked leaderboard |
+| Region filter (round modes) | ✅ | Monde / Europe / Amériques / Asie & Océanie / Afrique |
 | Legacy Socket.io server | 🟡 | preserved in `server/` for reference; safe to delete |
 
 ---
@@ -55,15 +59,15 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
   - `POST /api/games/[code]/chat` — rate-limited
   - `POST /api/games/[code]/advance` — client-driven timer transition (optimistic concurrency)
   - `POST /api/games/[code]/replay` — host-only reset
-  - `GET  /api/countries` — edge runtime, cached
+  - `GET  /api/countries` — statically generated at build, CDN-cached (FR names + difficulty/points)
 - **Shared helpers**: `parseBody`, `loadGameByCode`, `emitState`, `rateLimit`, zod schemas — [web/app/api/_lib.ts](web/app/api/_lib.ts)
 
 ### 1.4 Frontend
 - **Home** — name input, mode picker, create/join via HTTP — [web/app/page.tsx](web/app/page.tsx)
 - **Lobby** — host-controlled settings, player list, chat — [web/app/lobby/[code]/page.tsx](web/app/lobby/[code]/page.tsx)
-- **Game** — map + leaderboard + timer + input + chat, **client-driven `/advance` on timer expiry** — [web/app/game/[code]/page.tsx](web/app/game/[code]/page.tsx)
+- **Game** — map + inlined HUD (leaderboard + timer + answer bar) + chat, **client-driven `/advance` on timer expiry** — [web/app/game/[code]/page.tsx](web/app/game/[code]/page.tsx)
 - **Results** — animated podium + stats + replay — [web/app/results/[code]/page.tsx](web/app/results/[code]/page.tsx)
-- **WorldMap**, **Leaderboard**, **Timer**, **AnswerInput**, **Chat** — [web/components/](web/components)
+- **WorldMap**, **Chat** — [web/components/](web/components) · (Leaderboard / Timer / AnswerInput components removed — HUD is now inlined into the game page)
 - **`useGameRealtime`** — subscribes to `game:<CODE>` Supabase channel, seeds from `/api/games/[code]` — [web/lib/useGameRealtime.ts](web/lib/useGameRealtime.ts)
 - **`api`** — HTTP client, sends persistent `x-user-id` header — [web/lib/api.ts](web/lib/api.ts)
 - **`getUserId()`** — localStorage UUID — [web/lib/identity.ts](web/lib/identity.ts)
@@ -73,23 +77,32 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 - README rewritten for Vercel + Supabase ([README.md](README.md))
 - Full deploy walkthrough ([DEPLOYMENT_VERCEL.md](DEPLOYMENT_VERCEL.md))
 
+### 1.6 Production launch + Pavillon redesign (2026-05-21 → 05-22)
+- **Live in production** on Vercel + Supabase (smoke-tested, all migrations applied) — Phase A complete.
+- **Pavillon → Apple-soft visual system**: warm-white surfaces, hairline borders, rounded cards, pill buttons, sentence-case labels; Fraunces / Inter Tight / JetBrains Mono. Tokens in [web/tailwind.config.ts](web/tailwind.config.ts) + [web/app/globals.css](web/app/globals.css).
+- **Difficulty scoring** (Conquête): 5 tiers → 3/8/18/32/50 pts, points-ranked leaderboard — [web/lib/difficulty.ts](web/lib/difficulty.ts).
+- **Pays Mystère** + **Capitales** modes share a round engine: no-repeat shuffled deck, per-round timer, flat +1 per correct, 3s answer reveal, 2-wrong-guesses-per-round limit, map auto-zoom + locator pin for tiny countries. Capitales names the country and asks for its capital — [web/lib/capitals.ts](web/lib/capitals.ts).
+- **Region filter** (round modes): lobby picker Monde / Europe / Amériques / Asie & Océanie / Afrique; a region locks the deck to every country in it (Asia+Oceania merged) — [web/lib/regions.ts](web/lib/regions.ts), nullable `games.region` column.
+- **UX**: rooms default to private; lobby mode selector removed (mode chosen on home, read-only in lobby header); lobby no longer auto-scrolls to bottom; answer bar stays focused across rounds; hover detail overlay removed (spoiler-safe for Capitales).
+- **Map**: switched to `countries-50m` topojson (finer borders) + micro-country locator pin.
+- DB: `games.mode` enum→text (`0002`), nullable `games.region` (`0003`).
+
 ---
 
 ## 2. 🔵 In progress
 
-> Nothing currently. Next priority: provision the Supabase project and smoke-test end-to-end before any further feature work.
+> Nothing currently. Live in production. Suggested next: **Phase B** hardening (Redis rate limit + RLS tightening) before wider sharing, or **Phase F** mobile pass.
 
 ---
 
 ## 3. ⬜ To do — prioritized
 
-### Phase A — Smoke test on Supabase + Vercel
-- [ ] Create Supabase project, run `0001_init.sql`
-- [ ] `cd web && npm install && npm run dev` against real Supabase
-- [ ] 2-tab smoke test: create → join → start → conquer → finish → replay (both modes)
-- [ ] Fix any TS / runtime errors found
-- [ ] Deploy to Vercel preview, repeat the smoke test
-- [ ] (Optional) delete `server/` and remove from workspace if confident
+### Phase A — Smoke test on Supabase + Vercel — ✅ DONE (2026-05)
+- [x] Create Supabase project, run migrations (`0001`–`0003`)
+- [x] Run against real Supabase; iterate on TS / runtime errors
+- [x] Live-tested create → join → start → play → finish → replay (all 3 modes)
+- [x] Deployed to Vercel (preview, then production from `main`)
+- [ ] (Optional) delete legacy `server/` workspace
 
 ### Phase B — Hardening
 - [ ] Move per-(user, key) rate limit from in-process Map to Upstash Redis (`@upstash/ratelimit`) so it survives Lambda cold starts
@@ -118,7 +131,7 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 ### Phase F — UX polish
 - [ ] Mobile layout pass (game screen — leaderboard collapses to bottom sheet)
 - [ ] Sound effects + mute toggle
-- [ ] Continent filter in conquest mode (host setting)
+- [ ] Continent filter in **Conquête** (host setting) — already shipped for round modes (see §1.6)
 - [ ] Color picker in lobby
 - [ ] Avatar (DiceBear preset or upload)
 - [ ] i18n (FR/EN)
@@ -144,7 +157,7 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 
 ## 4. 🟣 Known limitations / tech debt
 
-- **Country count**: Vatican is matchable but won't render on the map — the 110m world topojson is too coarse for a 0.49 km² polygon. Switch to `countries-50m.json` if Vatican needs to be visually conquerable. Kosovo uses Natural Earth's `-99` sentinel id and renders correctly.
+- **Tiny countries**: now on `countries-50m` topojson; Vatican (0.49 km²) still won't render as a polygon, but round modes show a locator pin for micro-countries. Kosovo uses Natural Earth's `-99` sentinel id and renders correctly.
 - **Type duplication**: `web/types/shared.ts` mirrors `server/src/types/shared.ts`. With the server deprecated, the web copy is now the source of truth — collapse when ready.
 - **Topojson + custom data join**: `world-atlas` topojson uses ISO numeric ids; we match via `numericId`. Western Sahara, Somaliland, Antarctica render unclaimable, which is correct.
 - **In-process rate limit**: per-Lambda Map. A burst across many cold-started instances can exceed the intended limit. Mitigated by moving to Upstash Redis (Phase B).
@@ -157,7 +170,7 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 
 ## 5. Suggested working order
 
-1. **Phase A** (1 session) — provision + smoke test on real Supabase + Vercel
+1. ~~**Phase A** — provision + smoke test on real Supabase + Vercel~~ ✅ done (live in production)
 2. **Phase B** (1 session) — Redis rate limit + RLS tightening before launch
 3. **Phase C** (1 session) — reconnect grace + idle cleanup
 4. **Phase G.1–G.3** (1 session) — engine + route tests before features land
