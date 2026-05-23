@@ -1,7 +1,7 @@
 # 🗺️ Project Roadmap — World Conquest Quiz
 
 Living document. Update after every shipped feature.
-Last update: 2026-05-22 · Status: **🟢 Live in production on Vercel + Supabase** (auto-deploys from `main`).
+Last update: 2026-05-23 · Status: **🟢 Live in production on Vercel + Supabase** (auto-deploys from `main`). · FR/EN i18n done on branch `feat/i18n-fr-en` (pending merge).
 
 Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to-have
 
@@ -27,6 +27,7 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 | Game modes | ✅ | Conquête + Pays Mystère + Capitales |
 | Difficulty scoring (Conquête) | ✅ | 5 tiers → 3/8/18/32/50 pts, points-ranked leaderboard |
 | Region filter (round modes) | ✅ | Monde / Europe / Amériques / Asie & Océanie / Afrique |
+| Internationalization (FR/EN) | ✅ | per-client switch, default FR; server/DB untouched — branch `feat/i18n-fr-en`, **pending merge** |
 | Legacy Socket.io server | 🟡 | preserved in `server/` for reference; safe to delete |
 
 ---
@@ -59,7 +60,7 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
   - `POST /api/games/[code]/chat` — rate-limited
   - `POST /api/games/[code]/advance` — client-driven timer transition (optimistic concurrency)
   - `POST /api/games/[code]/replay` — host-only reset
-  - `GET  /api/countries` — statically generated at build, CDN-cached (FR names + difficulty/points)
+  - `GET  /api/countries` — statically generated at build, CDN-cached (language-neutral: English canonical names + difficulty/points; display names resolved client-side by ISO)
 - **Shared helpers**: `parseBody`, `loadGameByCode`, `emitState`, `rateLimit`, zod schemas — [web/app/api/_lib.ts](web/app/api/_lib.ts)
 
 ### 1.4 Frontend
@@ -87,11 +88,18 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 - **Map**: switched to `countries-50m` topojson (finer borders) + micro-country locator pin.
 - DB: `games.mode` enum→text (`0002`), nullable `games.region` (`0003`).
 
+### 1.7 Internationalization — FR/EN (2026-05-23) — *branch `feat/i18n-fr-en`, pending merge*
+- **Per-client language switch** (FR/EN) from the home header; default **French** (v1 unchanged). Choice persists in `localStorage`, applies app-wide, and syncs `<html lang>` with no hydration flash — [web/components/LangToggle.tsx](web/components/LangToggle.tsx), [web/components/LangBoot.tsx](web/components/LangBoot.tsx).
+- **Server, DB, and broadcasts untouched.** All geographic display text (country / capital / continent / region / difficulty names) is resolved **client-side by `isoCode`** from data that already shipped; the matchers were already bilingual, so gameplay/scoring needed no change — [web/lib/i18n/geo.ts](web/lib/i18n/geo.ts).
+- **UI strings** in [web/lib/i18n/messages.ts](web/lib/i18n/messages.ts); the `en` dictionary is typed `typeof fr`, so the compiler rejects any missing translation. Hook: `useT()` — [web/lib/i18n/useT.ts](web/lib/i18n/useT.ts).
+- `GET /api/countries` made language-neutral (English canonical names); server error strings translated client-side (`translateServerError`); generated usernames localized.
+- Verified: production build clean (types + lint + static gen) + headless-Chrome run (FR default, EN toggle switches whole app, persistence across reload, lobby in both languages).
+
 ---
 
 ## 2. 🔵 In progress
 
-> Nothing currently. Live in production. Suggested next: **Phase B** hardening (Redis rate limit + RLS tightening) before wider sharing, or **Phase F** mobile pass.
+> **FR/EN i18n** on branch `feat/i18n-fr-en` — awaiting PR review + merge (then auto-deploys from `main`). Otherwise live in production. Suggested next: **Phase B** hardening (Redis rate limit + RLS tightening) before wider sharing, or **Phase F** mobile pass.
 
 ---
 
@@ -134,7 +142,7 @@ Legend: ✅ done · 🟡 partial · 🔵 in progress · ⬜ todo · 🟣 nice-to
 - [ ] Continent filter in **Conquête** (host setting) — already shipped for round modes (see §1.6)
 - [ ] Color picker in lobby
 - [ ] Avatar (DiceBear preset or upload)
-- [ ] i18n (FR/EN)
+- [x] **i18n (FR/EN)** — ✅ done on branch `feat/i18n-fr-en` (per-client switch, default FR; see §1.7), pending merge
 
 ### Phase G — Tests
 - [ ] Vitest: cover `gameLogic` derivations
