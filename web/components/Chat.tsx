@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useGameStore } from "@/store/gameStore";
+import { useT } from "@/lib/i18n/useT";
 
 export default function Chat() {
   const params = useParams<{ code: string }>();
   const code = (params?.code ?? "").toUpperCase();
+  const { t } = useT();
   const messages = useGameStore((s) => s.chat);
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -29,7 +31,7 @@ export default function Chat() {
 
   return (
     <div className="pav-card flex flex-col min-h-0 overflow-hidden">
-      <div className="px-4 py-2.5 pav-label border-b border-line">Discussion</div>
+      <div className="px-4 py-2.5 pav-label border-b border-line">{t.chat.title}</div>
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 text-sm">
         {messages.map((m) => (
           <div key={m.id} className="leading-snug">
@@ -46,7 +48,7 @@ export default function Chat() {
           onChange={(e) => setText(e.target.value)}
           className="pav-input border-0 rounded-none bg-transparent px-2 py-1.5 focus:shadow-none"
           maxLength={280}
-          placeholder="Écris un message…"
+          placeholder={t.chat.placeholder}
         />
       </form>
     </div>

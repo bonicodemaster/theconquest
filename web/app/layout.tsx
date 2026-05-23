@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter_Tight, Fraunces, JetBrains_Mono } from "next/font/google";
+import LangBoot from "@/components/LangBoot";
 
 const sans = Inter_Tight({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={`${sans.variable} ${serif.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-paper text-ink font-sans antialiased">
+        <LangBoot />
         {children}
       </body>
     </html>

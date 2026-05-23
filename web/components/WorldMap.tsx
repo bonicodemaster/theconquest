@@ -10,6 +10,7 @@ import {
 } from "react-simple-maps";
 import { feature } from "topojson-client";
 import { useGameStore } from "@/store/gameStore";
+import { useT } from "@/lib/i18n/useT";
 import type { CountryMeta } from "@/types/shared";
 
 // Higher-detail world topojson (50m) so small countries are actually visible.
@@ -41,13 +42,13 @@ const VB_H = 400;
 const SCALE = 300;
 const DEFAULT_VIEW: View = { center: [0, 0], zoom: 1 };
 
-const CONTINENT_LABELS: { coords: [number, number]; text: string }[] = [
-  { coords: [-100, 48], text: "AMÉRIQUE DU NORD" },
-  { coords: [-58, -15], text: "AMÉRIQUE DU SUD" },
-  { coords: [16, 53], text: "EUROPE" },
-  { coords: [20, 7], text: "AFRIQUE" },
-  { coords: [90, 50], text: "ASIE" },
-  { coords: [140, -25], text: "OCÉANIE" },
+const CONTINENT_LABELS: { coords: [number, number]; fr: string; en: string }[] = [
+  { coords: [-100, 48], fr: "AMÉRIQUE DU NORD", en: "NORTH AMERICA" },
+  { coords: [-58, -15], fr: "AMÉRIQUE DU SUD", en: "SOUTH AMERICA" },
+  { coords: [16, 53], fr: "EUROPE", en: "EUROPE" },
+  { coords: [20, 7], fr: "AFRIQUE", en: "AFRICA" },
+  { coords: [90, 50], fr: "ASIE", en: "ASIA" },
+  { coords: [140, -25], fr: "OCÉANIE", en: "OCEANIA" },
 ];
 
 interface View {
@@ -118,6 +119,7 @@ export default function WorldMap({
 }: Props) {
   const state = useGameStore((s) => s.state);
   const lastConquest = useGameStore((s) => s.lastConquest);
+  const { lang } = useT();
 
   // Fetch + parse the topojson once; derive both the geographies and a
   // per-country focus map (used to auto-zoom onto the mystery target).
@@ -275,7 +277,7 @@ export default function WorldMap({
 
           {showLabels && !zoomedIn &&
             CONTINENT_LABELS.map((l) => (
-              <Marker key={l.text} coordinates={l.coords}>
+              <Marker key={l.fr} coordinates={l.coords}>
                 <text
                   textAnchor="middle"
                   className="font-mono"
@@ -287,7 +289,7 @@ export default function WorldMap({
                     pointerEvents: "none",
                   }}
                 >
-                  {l.text}
+                  {l[lang]}
                 </text>
               </Marker>
             ))}

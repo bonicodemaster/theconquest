@@ -1,10 +1,15 @@
 "use client";
 import { getUserId } from "./identity";
+import { useGameStore } from "@/store/gameStore";
+import { dict, translateServerError } from "@/lib/i18n/messages";
 
 async function call<T>(
   url: string,
   init?: RequestInit
 ): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  // Resolve display language at call time (the server stays French; we
+  // translate its error strings on the client — see translateServerError).
+  const lang = useGameStore.getState().lang;
   // Hard 8-second timeout so the UI is never stuck waiting on a hung Lambda.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -23,11 +28,14 @@ async function call<T>(
       signal: controller.signal,
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: json?.error ?? `HTTP ${res.status}` };
+    if (!res.ok) {
+      const raw = json?.error ?? dict(lang).netError.http(res.status);
+      return { ok: false, error: translateServerError(raw, lang) };
+    }
     return { ok: true, data: json as T };
   } catch (e: any) {
-    if (e?.name === "AbortError") return { ok: false, error: "Délai dépassé" };
-    return { ok: false, error: e?.message ?? "Erreur réseau" };
+    if (e?.name === "AbortError") return { ok: false, error: dict(lang).netError.timeout };
+    return { ok: false, error: e?.message ?? dict(lang).netError.network };
   } finally {
     clearTimeout(timeout);
   }

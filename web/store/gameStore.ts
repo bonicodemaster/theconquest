@@ -1,9 +1,14 @@
 import { create } from "zustand";
 import type { ChatMessage, LeaderboardEntry, PublicGameState } from "@/types/shared";
+import { DEFAULT_LANG, type Lang } from "@/lib/i18n/messages";
 
 interface GameStore {
   username: string;
   setUsername: (u: string) => void;
+
+  /** UI language — a per-client preference (persisted to localStorage). */
+  lang: Lang;
+  setLang: (l: Lang) => void;
 
   state: PublicGameState | null;
   setState: (s: PublicGameState | null) => void;
@@ -47,6 +52,15 @@ export const useGameStore = create<GameStore>((set) => ({
   setUsername: (u) => {
     if (typeof window !== "undefined") localStorage.setItem("conquest.username", u);
     set({ username: u });
+  },
+
+  // Always starts at the default so the server render and the first client
+  // render agree (no hydration mismatch). <LangBoot/> reads localStorage once
+  // after mount and switches to the saved language.
+  lang: DEFAULT_LANG,
+  setLang: (l) => {
+    if (typeof window !== "undefined") localStorage.setItem("conquest.lang", l);
+    set({ lang: l });
   },
 
   state: null,

@@ -4,10 +4,13 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useGameStore } from "@/store/gameStore";
 import { username as suggestUsername } from "@/lib/format";
+import { useT } from "@/lib/i18n/useT";
+import LangToggle from "@/components/LangToggle";
 import type { GameMode, GameSettings } from "@/types/shared";
 
 export default function Home() {
   const router = useRouter();
+  const { t, lang } = useT();
   const storeName = useGameStore((s) => s.username);
   const setStoreName = useGameStore((s) => s.setUsername);
 
@@ -18,8 +21,8 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setName(storeName || suggestUsername(crypto.randomUUID()));
-  }, [storeName]);
+    setName(storeName || suggestUsername(crypto.randomUUID(), lang));
+  }, [storeName, lang]);
 
   const createGame = async () => {
     setError(null);
@@ -56,35 +59,34 @@ export default function Home() {
           <span className="w-2.5 h-2.5 rounded-full bg-accent" />
           World · Conquest · Quiz
         </div>
-        <div className="text-[12px] text-mute">
-          Géographie · temps réel
+        <div className="flex items-center gap-4">
+          <span className="text-[12px] text-mute hidden sm:block">{t.common.tagline}</span>
+          <LangToggle />
         </div>
       </header>
 
       <div className="flex-1 grid lg:grid-cols-[1.2fr_1fr]">
         {/* LEFT — hero */}
         <section className="px-8 md:px-14 py-12 md:py-16 flex flex-col gap-8 lg:border-r border-line">
-          <div className="pav-label">Multijoueur en temps réel</div>
+          <div className="pav-label">{t.home.heroLabel}</div>
           <h1 className="font-serif font-black leading-[0.9] tracking-tight text-6xl md:text-8xl">
-            Conquiers<br />le monde,<br /><span className="text-accent">vite.</span>
+            {t.home.heroLine1}<br />{t.home.heroLine2}<br /><span className="text-accent">{t.home.heroLine3}</span>
           </h1>
           <p className="max-w-md text-base md:text-lg leading-relaxed text-ink/80">
-            Tape le nom d'un pays avant les autres. Verrouille le territoire.
-            Plus le pays est dur à trouver, plus il rapporte. Domine la carte
-            avant la fin du chrono.
+            {t.home.heroBody}
           </p>
 
           <div className="mt-auto flex gap-12 text-[11px] text-mute">
-            <div><div className="font-serif text-3xl text-ink font-bold">196</div>Pays</div>
-            <div><div className="font-serif text-3xl text-ink font-bold">3–50</div>Pts / pays</div>
-            <div><div className="font-serif text-3xl text-ink font-bold">2–30</div>Joueurs</div>
+            <div><div className="font-serif text-3xl text-ink font-bold">196</div>{t.home.statCountries}</div>
+            <div><div className="font-serif text-3xl text-ink font-bold">3–50</div>{t.home.statPtsPerCountry}</div>
+            <div><div className="font-serif text-3xl text-ink font-bold">2–30</div>{t.home.statPlayers}</div>
           </div>
         </section>
 
         {/* RIGHT — console */}
         <section className="px-8 md:px-12 py-12 md:py-16 flex flex-col gap-7 justify-center">
           <div>
-            <div className="pav-label mb-2">Ton nom</div>
+            <div className="pav-label mb-2">{t.home.yourName}</div>
             <input
               className="pav-input text-lg font-semibold"
               value={name}
@@ -94,7 +96,7 @@ export default function Home() {
           </div>
 
           <div>
-            <div className="pav-label mb-2">Mode de jeu</div>
+            <div className="pav-label mb-2">{t.home.gameMode}</div>
             <div className="grid grid-cols-3 border border-line rounded-xl overflow-hidden">
               {(["conquest", "mystery", "capitals"] as GameMode[]).map((m, i) => (
                 <button
@@ -105,7 +107,7 @@ export default function Home() {
                     i < 2 ? "border-r border-line" : ""
                   } ${mode === m ? "bg-ink text-paper" : "bg-panel text-ink hover:bg-panel-soft"}`}
                 >
-                  {m === "conquest" ? "Conquête" : m === "mystery" ? "Mystère" : "Capitales"}
+                  {m === "conquest" ? t.mode.conquestShort : m === "mystery" ? t.mode.mysteryShort : t.mode.capitalsShort}
                 </button>
               ))}
             </div>
@@ -116,25 +118,25 @@ export default function Home() {
             disabled={busy || !name}
             className="pav-btn-primary pav-btn-lg w-full"
           >
-            {busy ? "Création…" : "Créer une partie ↗"}
+            {busy ? t.home.creating : t.home.createGame}
           </button>
 
           <div className="flex items-center gap-4 text-[11px] text-mute">
             <span className="flex-1 pav-rule" />
-            ou rejoindre
+            {t.home.orJoin}
             <span className="flex-1 pav-rule" />
           </div>
 
           <div className="flex gap-2">
             <input
               className="pav-input font-mono uppercase tracking-[0.3em] text-lg font-bold text-center"
-              placeholder="CODE"
+              placeholder={t.home.codePlaceholder}
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               maxLength={6}
             />
             <button onClick={joinGame} disabled={busy || !code || !name} className="pav-btn-ghost px-6">
-              {busy ? "…" : "Rejoindre"}
+              {busy ? "…" : t.home.join}
             </button>
           </div>
 

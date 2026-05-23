@@ -6,7 +6,9 @@ import { getUserId } from "@/lib/identity";
 import { useGameRealtime } from "@/lib/useGameRealtime";
 import { useGameStore } from "@/store/gameStore";
 import Chat from "@/components/Chat";
-import { REGIONS, REGION_LABEL_FR, REGION_COUNT } from "@/lib/regions";
+import { REGIONS, REGION_COUNT } from "@/lib/regions";
+import { regionLabel } from "@/lib/i18n/geo";
+import { useT } from "@/lib/i18n/useT";
 import type { Difficulty, GameSettings, Region } from "@/types/shared";
 
 export default function LobbyPage({ params }: { params: { code: string } }) {
@@ -15,6 +17,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const state = useGameStore((s) => s.state);
   const setState = useGameStore((s) => s.setState);
   const setLb = useGameStore((s) => s.setLeaderboard);
+  const { t, lang } = useT();
 
   useGameRealtime(code);
 
@@ -71,7 +74,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
       <main className="min-h-screen flex items-center justify-center p-6">
         <div className="pav-card p-8 max-w-sm text-center">
           <p className="text-accent mb-4 font-medium">{joinError}</p>
-          <button className="pav-btn-ghost" onClick={() => router.push("/")}>Retour à l'accueil</button>
+          <button className="pav-btn-ghost" onClick={() => router.push("/")}>{t.common.back}</button>
         </div>
       </main>
     );
@@ -85,7 +88,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
   const settings: GameSettings = { ...state.settings, ...optimistic };
   const slots = Math.max(settings.maxPlayers, state.players.length);
   // Mode is chosen on the home screen at creation — shown read-only here.
-  const modeLabel = settings.mode === "conquest" ? "Conquête" : settings.mode === "capitals" ? "Capitales" : "Pays Mystère";
+  const modeLabel = settings.mode === "conquest" ? t.mode.conquest : settings.mode === "capitals" ? t.mode.capitals : t.mode.mystery;
 
   const updateSettings = async (patch: Partial<GameSettings>) => {
     setOptimistic((prev) => ({ ...prev, ...patch }));
@@ -142,47 +145,47 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
       {/* Header */}
       <header className="flex items-center justify-between px-6 md:px-10 py-4 border-b border-line">
         <div className="flex items-baseline gap-4">
-          <span className="text-[12px] text-mute">Lobby · {modeLabel}</span>
+          <span className="text-[12px] text-mute">{t.lobby.lobby} · {modeLabel}</span>
           <span className="font-serif text-3xl font-black tracking-[0.12em]">{state.code}</span>
         </div>
         <div className="flex items-center gap-5">
           <span className="text-[12px] text-mute hidden sm:block">
-            En attente · {state.players.length} / {settings.maxPlayers} joueurs
+            {t.lobby.waiting(state.players.length, settings.maxPlayers)}
           </span>
-          <button className="pav-btn-ghost" onClick={leave}>Quitter</button>
+          <button className="pav-btn-ghost" onClick={leave}>{t.common.leave}</button>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto p-4 md:p-8 grid lg:grid-cols-[1.3fr_1fr] gap-6">
         {/* Settings */}
         <section className="pav-card p-6 md:p-8 space-y-6">
-          <h2 className="pav-label">Configuration de la partie</h2>
+          <h2 className="pav-label">{t.lobby.setup}</h2>
 
           {settings.mode === "conquest" ? (
-            <Field label="Durée de la partie">
+            <Field label={t.lobby.gameDuration}>
               <Segmented<number>
                 value={settings.durationSec}
-                options={[{ v: 60, l: "1 min" }, { v: 180, l: "3 min" }, { v: 300, l: "5 min" }, { v: 600, l: "10 min" }]}
+                options={[{ v: 60, l: t.lobby.min(1) }, { v: 180, l: t.lobby.min(3) }, { v: 300, l: t.lobby.min(5) }, { v: 600, l: t.lobby.min(10) }]}
                 disabled={!isHost}
                 onChange={(v) => updateSettings({ durationSec: v })}
               />
             </Field>
           ) : (
             <>
-              <Field label="Durée par manche">
+              <Field label={t.lobby.roundDuration}>
                 <Segmented<number>
                   value={settings.durationSec}
-                  options={[{ v: 10, l: "10s" }, { v: 20, l: "20s" }, { v: 30, l: "30s" }]}
+                  options={[{ v: 10, l: t.lobby.sec(10) }, { v: 20, l: t.lobby.sec(20) }, { v: 30, l: t.lobby.sec(30) }]}
                   disabled={!isHost}
                   onChange={(v) => updateSettings({ durationSec: v })}
                 />
               </Field>
-              <Field label="Région">
+              <Field label={t.lobby.region}>
                 <Segmented<string>
                   value={settings.region ?? "world"}
                   options={[
-                    { v: "world", l: "Monde" },
-                    ...REGIONS.map((r) => ({ v: r as string, l: REGION_LABEL_FR[r] })),
+                    { v: "world", l: t.lobby.world },
+                    ...REGIONS.map((r) => ({ v: r as string, l: regionLabel(r, lang) })),
                   ]}
                   disabled={!isHost}
                   onChange={(v) => updateSettings({ region: v === "world" ? null : (v as Region) })}
@@ -190,16 +193,16 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
               </Field>
               {settings.region ? (
                 // Region-locked: the count is fixed to the whole continent.
-                <Field label="Nombre de pays">
+                <Field label={t.lobby.countryCount}>
                   <div className="border border-line rounded-xl px-3 py-2.5 text-xs font-semibold text-mute bg-panel-soft">
-                    Tous les {REGION_COUNT[settings.region]} pays d'{REGION_LABEL_FR[settings.region]}
+                    {t.lobby.allCountriesIn(REGION_COUNT[settings.region], regionLabel(settings.region, lang))}
                   </div>
                 </Field>
               ) : (
-                <Field label="Nombre de pays">
+                <Field label={t.lobby.countryCount}>
                   <Segmented<number>
                     value={settings.totalCountries ?? 50}
-                    options={[{ v: 20, l: "20" }, { v: 50, l: "50" }, { v: 100, l: "100" }, { v: 196, l: "Tous" }]}
+                    options={[{ v: 20, l: "20" }, { v: 50, l: "50" }, { v: 100, l: "100" }, { v: 196, l: t.lobby.all }]}
                     disabled={!isHost}
                     onChange={(v) => updateSettings({ totalCountries: v as 20 | 50 | 100 | 196 })}
                   />
@@ -208,16 +211,16 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
             </>
           )}
 
-          <Field label="Difficulté — Tolérance aux fautes">
+          <Field label={t.lobby.difficulty}>
             <Segmented<Difficulty>
               value={settings.difficulty}
-              options={[{ v: "easy", l: "Souple (alias + orthographe approx.)" }, { v: "normal", l: "Stricte (exact)" }]}
+              options={[{ v: "easy", l: t.lobby.difficultyLenient }, { v: "normal", l: t.lobby.difficultyStrict }]}
               disabled={!isHost}
               onChange={(v) => updateSettings({ difficulty: v })}
             />
           </Field>
 
-          <Field label="Joueurs max">
+          <Field label={t.lobby.maxPlayers}>
             <Segmented<number>
               value={settings.maxPlayers}
               options={[2, 4, 8, 12, 20, 30].map((n) => ({ v: n, l: String(n) }))}
@@ -226,10 +229,10 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
             />
           </Field>
 
-          <Field label="Visibilité">
+          <Field label={t.lobby.visibility}>
             <Segmented<boolean>
               value={settings.isPrivate}
-              options={[{ v: false, l: "Public" }, { v: true, l: "Privé" }]}
+              options={[{ v: false, l: t.lobby.public }, { v: true, l: t.lobby.private }]}
               disabled={!isHost}
               onChange={(v) => updateSettings({ isPrivate: v })}
             />
@@ -239,15 +242,15 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
             {isHost ? (
               <>
                 <button onClick={start} disabled={starting} className="pav-btn-primary pav-btn-lg w-full">
-                  {starting ? "Démarrage…" : "Lancer la partie →"}
+                  {starting ? t.lobby.starting : t.lobby.startGame}
                 </button>
                 {startError && <p className="text-center text-sm text-accent mt-2">{startError}</p>}
                 <div className="text-[11px] text-mute mt-3 text-center">
-                  Hôte · tu peux lancer quand tu veux
+                  {t.lobby.hostHint}
                 </div>
               </>
             ) : (
-              <p className="text-center text-sm text-mute">En attente du démarrage par l'hôte…</p>
+              <p className="text-center text-sm text-mute">{t.lobby.waitingForHost}</p>
             )}
           </div>
         </section>
@@ -255,14 +258,14 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
         {/* Players + Chat */}
         <div className="flex flex-col gap-6 min-h-[520px]">
           <section className="pav-card p-5">
-            <h2 className="pav-label mb-3">Joueurs présents · {state.players.length}/{settings.maxPlayers}</h2>
+            <h2 className="pav-label mb-3">{t.lobby.playersPresent(state.players.length, settings.maxPlayers)}</h2>
             <div className="grid grid-cols-1 gap-2">
               {Array.from({ length: slots }).map((_, i) => {
                 const p = state.players[i];
                 if (!p) {
                   return (
                     <div key={`empty-${i}`} className="border border-dashed border-line rounded-xl min-h-[56px] flex items-center justify-center text-[11px] text-mute/50">
-                      Slot libre
+                      {t.lobby.openSlot}
                     </div>
                   );
                 }
@@ -274,7 +277,7 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold truncate flex items-center gap-2">
                         {p.username}
-                        {p.isHost && <span className="text-[9px] bg-ink text-paper px-2 py-0.5 rounded-full">Hôte</span>}
+                        {p.isHost && <span className="text-[9px] bg-ink text-paper px-2 py-0.5 rounded-full">{t.lobby.host}</span>}
                       </div>
                     </div>
                   </div>
@@ -331,9 +334,10 @@ function Segmented<T>({
 }
 
 function LobbySkeleton() {
+  const { t } = useT();
   return (
     <main className="min-h-screen flex items-center justify-center">
-      <div className="text-sm text-mute animate-pulse">Connexion au salon…</div>
+      <div className="text-sm text-mute animate-pulse">{t.lobby.connecting}</div>
     </main>
   );
 }

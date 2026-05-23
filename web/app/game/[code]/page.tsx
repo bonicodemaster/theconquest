@@ -8,7 +8,10 @@ import { api } from "@/lib/api";
 import { getUserId } from "@/lib/identity";
 import { useGameStore, type ConquestEvent } from "@/store/gameStore";
 import { formatArea } from "@/lib/format";
-import { DIFFICULTY_LABEL, type DifficultyTier } from "@/lib/difficulty";
+import { type DifficultyTier } from "@/lib/difficulty";
+import { useT } from "@/lib/i18n/useT";
+import { countryName, capitalName, difficultyTierLabel } from "@/lib/i18n/geo";
+import type { Lang } from "@/lib/i18n/messages";
 import type { CountryMeta, LeaderboardEntry, GameMode } from "@/types/shared";
 
 // Map needs window — load client-only.
@@ -26,6 +29,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
   const { code } = params;
   const router = useRouter();
   useGameRealtime(code);
+  const { lang, t } = useT();
 
   const state = useGameStore((s) => s.state);
   const leaderboard = useGameStore((s) => s.leaderboard);
@@ -128,7 +132,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
   if (!state) {
     return (
       <main className="min-h-screen flex items-center justify-center text-sm text-mute">
-        Chargement de la partie…
+        {t.game.loading}
       </main>
     );
   }
@@ -137,7 +141,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
   const isConquest = mode === "conquest";
   const isCapitals = mode === "capitals";
   const roundBased = !isConquest; // mystery + capitals share the round-based HUD
-  const modeLabel = isConquest ? "Conquête" : isCapitals ? "Capitales" : "Pays Mystère";
+  const modeLabel = isConquest ? t.mode.conquest : isCapitals ? t.mode.capitals : t.mode.mystery;
   const myUserId = getUserId();
   const ranked = leaderboard;
   const me = ranked.find((p) => p.playerId === myUserId);
@@ -167,11 +171,11 @@ export default function GamePage({ params }: { params: { code: string } }) {
             WCQ
           </a>
           <span className="text-[12px] text-mute truncate">
-            Room {state.code} · {modeLabel}
+            {t.common.room} {state.code} · {modeLabel}
           </span>
         </div>
         <div className="text-center">
-          <div className="pav-label">{isConquest ? "Restant" : "Manche"}</div>
+          <div className="pav-label">{isConquest ? t.game.timeLeft : t.game.round}</div>
           {isConquest ? (
             <div className={`font-serif font-black leading-none tnum text-4xl mt-0.5 ${danger ? "text-accent" : "text-ink"}`}>
               {fmtTime(remaining)}
@@ -184,7 +188,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
         </div>
         <div className="flex justify-end gap-6 items-baseline">
           <div className="text-right">
-            <div className="pav-label">{isConquest ? "Pays" : "Restant"}</div>
+            <div className="pav-label">{isConquest ? t.game.countries : t.game.timeLeft}</div>
             <div className="font-serif text-lg font-extrabold tnum">
               {isConquest
                 ? <>{conqueredCount} <span className="text-mute text-xs">/ {total}</span></>
@@ -192,7 +196,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
             </div>
           </div>
           <div className="text-right">
-            <div className="pav-label">Ton rang</div>
+            <div className="pav-label">{t.game.yourRank}</div>
             <div className={`font-serif text-lg font-extrabold ${myRank === 1 ? "text-accent" : "text-ink"}`}>
               #{myRank || "—"}
             </div>
@@ -205,7 +209,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
         {/* LEFT — leaderboard */}
         <aside className="border-r border-line flex flex-col min-h-0 overflow-hidden">
           <div className="px-4 pt-3.5 pb-2">
-            <div className="pav-label">Classement live</div>
+            <div className="pav-label">{t.game.liveRanking}</div>
           </div>
           <div className="flex-1 overflow-y-auto">
             {ranked.map((p, i) => (
@@ -214,20 +218,20 @@ export default function GamePage({ params }: { params: { code: string } }) {
           </div>
           {/* Ton score footer */}
           <div className="border-t border-line px-4 py-3 bg-panel">
-            <div className="pav-label">Ton score</div>
+            <div className="pav-label">{t.game.yourScore}</div>
             <div className="flex items-baseline gap-2.5 mt-1">
               <div className="font-serif text-4xl font-black leading-none text-accent tnum">{me?.score ?? 0}</div>
               <div className="font-mono text-[10px] text-mute">pts</div>
               <div className="ml-auto text-[11px] text-mute">
                 {me && me.score >= topScore
-                  ? <span className="text-accent font-semibold">En tête</span>
-                  : `${topScore - (me?.score ?? 0)} d'écart`}
+                  ? <span className="text-accent font-semibold">{t.game.leading}</span>
+                  : t.game.behind(topScore - (me?.score ?? 0))}
               </div>
             </div>
             <div className="text-[11px] text-mute mt-2">
               {isConquest
-                ? `${me?.countriesCount ?? 0} pays · ${formatArea(myArea)} · ${myPct}%`
-                : `${me?.score ?? 0} ${isCapitals ? "capitales trouvées" : "pays trouvés"}`}
+                ? t.game.conquestStat(me?.countriesCount ?? 0, formatArea(myArea), myPct)
+                : isCapitals ? t.game.capitalsFound(me?.score ?? 0) : t.game.countriesFound(me?.score ?? 0)}
             </div>
             <div className="mt-2.5 h-1.5 bg-panel-soft rounded-full overflow-hidden relative">
               <div
@@ -253,22 +257,22 @@ export default function GamePage({ params }: { params: { code: string } }) {
           {/* Capitales — show the named country to find (answer = its capital) */}
           {isCapitals && promptCountry && !state.round?.revealedName && (
             <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-panel border border-line rounded-2xl px-5 py-2.5 shadow-elevated flex items-baseline gap-2.5 pointer-events-none">
-              <span className="text-[11px] text-mute">Capitale de</span>
-              <span className="font-serif text-xl font-black">{promptCountry.name}</span>
+              <span className="text-[11px] text-mute">{t.game.capitalOf}</span>
+              <span className="font-serif text-xl font-black">{countryName(state.round!.isoCode, lang)}</span>
             </div>
           )}
 
           {/* Answer reveal (Mystère + Capitales) */}
           {roundBased && state.round?.revealedName && (
             <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-ink text-paper px-5 py-2.5 rounded-full shadow-toast animate-slideIn flex items-baseline gap-2">
-              <span className="text-[11px] text-paper/60">Réponse</span>
-              <span className="font-serif text-xl font-black">{state.round.revealedName}</span>
+              <span className="text-[11px] text-paper/60">{t.game.answer}</span>
+              <span className="font-serif text-xl font-black">{isCapitals ? capitalName(state.round.isoCode, lang) : countryName(state.round.isoCode, lang)}</span>
             </div>
           )}
 
           {/* Capture flash (conquest) */}
           {isConquest && lastConquest && (
-            <CaptureFlash key={lastConquest.at} ev={lastConquest} />
+            <CaptureFlash key={lastConquest.at} ev={lastConquest} lang={lang} />
           )}
 
           {/* Toast feed bottom-left (conquest) */}
@@ -283,10 +287,10 @@ export default function GamePage({ params }: { params: { code: string } }) {
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: f.color }} />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-semibold">
-                      <span style={{ color: f.color }}>{f.username}</span> · {f.name}
+                      <span style={{ color: f.color }}>{f.username}</span> · {countryName(f.isoCode, lang)}
                     </div>
                     <div className="text-[10px] text-paper/55 mt-0.5">
-                      {DIFFICULTY_LABEL[f.difficulty as DifficultyTier] ?? ""}
+                      {difficultyTierLabel(f.difficulty as DifficultyTier, lang)}
                     </div>
                   </div>
                   <div className="font-serif text-xl font-black leading-none" style={{ color: f.isMe ? "#d4541c" : "#fff" }}>
@@ -306,7 +310,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
       >
         <div className="px-5 flex items-center border-r border-line">
           <div>
-            <div className="pav-label">Score</div>
+            <div className="pav-label">{t.game.score}</div>
             <div className="font-serif text-3xl font-black leading-none text-accent tnum">{me?.score ?? 0}</div>
           </div>
         </div>
@@ -321,7 +325,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
                 if (e.key === "Enter") { e.preventDefault(); void submit(); }
                 if (e.key === "Escape") setValue("");
               }}
-              placeholder={outOfTries ? "Plus d'essais cette manche" : revealPhase ? "Réponse révélée…" : isCapitals ? "Quelle est la capitale ?" : mode === "mystery" ? "Quel est ce pays ?" : "Tape un pays…"}
+              placeholder={outOfTries ? t.game.phNoTries : revealPhase ? t.game.phRevealed : isCapitals ? t.game.phCapital : mode === "mystery" ? t.game.phMystery : t.game.phConquest}
               autoComplete="off"
               spellCheck={false}
               disabled={inputLocked}
@@ -329,12 +333,12 @@ export default function GamePage({ params }: { params: { code: string } }) {
             />
             <div className="text-[11px] text-mute mt-1.5">
               {revealPhase
-                ? "Manche suivante dans un instant…"
+                ? t.game.hintNextRound
                 : outOfTries
-                ? "Plus d'essais — attends la réponse"
+                ? t.game.hintNoTries
                 : roundBased
-                ? `Essai ${wrongCount + 1} / ${MAX_WRONG_MYSTERY} · devine sans indice`
-                : "↵ Valider · Esc effacer · Devine sans indice"}
+                ? t.game.hintTries(wrongCount + 1, MAX_WRONG_MYSTERY)
+                : t.game.hintConquest}
             </div>
           </div>
           <button
@@ -342,7 +346,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
             disabled={!value || inputLocked}
             className="pav-btn-primary disabled:bg-panel-soft disabled:text-mute disabled:shadow-none"
           >
-            {revealPhase ? "Réponse" : "Verrouiller"}
+            {revealPhase ? t.game.btnAnswer : t.game.btnLock}
           </button>
         </div>
       </footer>
@@ -351,6 +355,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
 }
 
 function LeaderRow({ p, rank, me, mode }: { p: LeaderboardEntry; rank: number; me: boolean; mode: GameMode }) {
+  const { t } = useT();
   return (
     <div
       className={`flex items-center gap-3 px-3 py-2.5 border-t border-line relative ${me ? "bg-panel" : ""}`}
@@ -362,7 +367,7 @@ function LeaderRow({ p, rank, me, mode }: { p: LeaderboardEntry; rank: number; m
         <div className="text-[13px] font-bold tracking-wide truncate">{p.username}</div>
         {mode === "conquest" && (
           <div className="font-mono text-[10px] text-mute truncate">
-            {p.countriesCount} pays · {formatArea(p.totalAreaKm2)}
+            {p.countriesCount} {t.game.countriesShort} · {formatArea(p.totalAreaKm2)}
           </div>
         )}
       </div>
@@ -374,7 +379,7 @@ function LeaderRow({ p, rank, me, mode }: { p: LeaderboardEntry; rank: number; m
   );
 }
 
-function CaptureFlash({ ev }: { ev: ConquestEvent }) {
+function CaptureFlash({ ev, lang }: { ev: ConquestEvent; lang: Lang }) {
   const [show, setShow] = useState(true);
   useEffect(() => {
     const t = setTimeout(() => setShow(false), 950);
@@ -387,7 +392,7 @@ function CaptureFlash({ ev }: { ev: ConquestEvent }) {
         className="px-5 py-3 inline-flex items-baseline gap-3.5 text-white animate-slideIn shadow-toast"
         style={{ background: ev.color }}
       >
-        <span className="font-serif text-2xl font-black">{ev.name} ✓</span>
+        <span className="font-serif text-2xl font-black">{countryName(ev.isoCode, lang)} ✓</span>
         <span className="font-serif text-2xl font-black">+{ev.points}</span>
         <span className="font-mono text-[11px] tracking-wider opacity-80">PTS</span>
       </div>
