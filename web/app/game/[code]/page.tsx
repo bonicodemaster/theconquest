@@ -57,8 +57,14 @@ export default function GamePage({ params }: { params: { code: string } }) {
 
   useEffect(() => { inputRef.current?.focus(); }, [code]);
 
-  // Anti-spam: reset the per-round wrong-guess count when the mystery round changes.
-  useEffect(() => { setWrongCount(0); }, [state?.round?.index, state?.settings.mode]);
+  // New round: reset the per-round wrong-guess count and clear the answer box, so
+  // a half-typed guess from the previous round doesn't linger (otherwise a player
+  // who didn't submit has to erase it before answering). Conquest has no rounds
+  // (round.index stays undefined), so this only fires for Mystère/Capitales.
+  useEffect(() => {
+    setWrongCount(0);
+    setValue("");
+  }, [state?.round?.index, state?.settings.mode]);
 
   // Keep the answer bar focused across rounds. The input is disabled during the
   // between-round reveal pause (and when out of tries), which drops browser focus
