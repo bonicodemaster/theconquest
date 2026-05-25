@@ -10,6 +10,7 @@ import { useGameStore, type ConquestEvent } from "@/store/gameStore";
 import { formatArea } from "@/lib/format";
 import { type DifficultyTier } from "@/lib/difficulty";
 import { useT } from "@/lib/i18n/useT";
+import { MAX_WRONG_GUESSES } from "@/lib/roundRules";
 import { countryName, capitalName, difficultyTierLabel } from "@/lib/i18n/geo";
 import type { Lang } from "@/lib/i18n/messages";
 import type { CountryMeta, LeaderboardEntry, GameMode } from "@/types/shared";
@@ -18,7 +19,7 @@ import type { CountryMeta, LeaderboardEntry, GameMode } from "@/types/shared";
 const WorldMap = dynamic(() => import("@/components/WorldMap"), { ssr: false });
 
 const TOTAL_WORLD_KM2 = 148_940_000;
-const MAX_WRONG_MYSTERY = 2; // wrong guesses allowed per mystery round (anti-spam)
+const MAX_WRONG_MYSTERY = MAX_WRONG_GUESSES; // shared with the server's early round-end
 
 function fmtTime(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));

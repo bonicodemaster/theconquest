@@ -31,6 +31,11 @@ export default function ResultsPage({ params }: { params: { code: string } }) {
   const podium = [lb[1], lb[0], lb[2]]; // 2nd, 1st, 3rd visual order
   const totalConquered = state?.conquered.length ?? 0;
   const maxScore = Math.max(1, ...lb.map((p) => p.score));
+  // A shared top score is a draw — show "Égalité" rather than crowning lb[0].
+  const topScore = lb[0]?.score ?? 0;
+  const isTie = lb.length > 1 && lb[1].score === topScore;
+  // Standard competition ranking (1, 1, 3…) so tied leaders both read as rank 1.
+  const rankOf = (score: number) => 1 + lb.filter((p) => p.score > score).length;
 
   const playAgain = async () => {
     await api.playAgain(code);
@@ -52,22 +57,24 @@ export default function ResultsPage({ params }: { params: { code: string } }) {
         <section className="px-8 md:px-12 py-10 flex flex-col lg:border-r border-line">
           <div className="pav-label">{t.results.verdict}</div>
           <h1 className="font-serif font-black leading-[0.92] tracking-tight text-5xl md:text-7xl mt-2">
-            {winner ? (
-              iAmWinner ? (
-                <><span className="text-accent">{t.results.youRuleA}</span><br />{t.results.youRuleB}</>
-              ) : (
-                <><span style={{ color: winner.color }}>{winner.username}</span><br />{t.results.rulesSuffix}</>
-              )
-            ) : t.results.finished}
+            {!winner ? (
+              t.results.finished
+            ) : isTie ? (
+              <span className="text-accent">{t.results.tie}</span>
+            ) : iAmWinner ? (
+              <><span className="text-accent">{t.results.youRuleA}</span><br />{t.results.youRuleB}</>
+            ) : (
+              <><span style={{ color: winner.color }}>{winner.username}</span><br />{t.results.rulesSuffix}</>
+            )}
           </h1>
 
           {/* Podium */}
           <div className="grid grid-cols-[1fr_1.3fr_1fr] gap-3 items-end mt-10 flex-1 min-h-[260px]">
             {podium.map((p, i) => {
               if (!p) return <div key={i} />;
-              const isWinner = i === 1;
-              const h = isWinner ? "100%" : i === 0 ? "78%" : "60%";
-              const rank = isWinner ? 1 : i === 0 ? 2 : 3;
+              const rank = rankOf(p.score);
+              const isWinner = rank === 1;
+              const h = rank === 1 ? "100%" : rank === 2 ? "78%" : "60%";
               return (
                 <div key={p.playerId} className="flex flex-col h-full justify-end">
                   <div className="text-[11px] text-mute mb-2">
@@ -102,7 +109,7 @@ export default function ResultsPage({ params }: { params: { code: string } }) {
         {/* RIGHT — stats + distribution + table */}
         <section className="px-8 md:px-10 py-10 flex flex-col gap-6">
           <div className="grid grid-cols-2 gap-2.5">
-            <StatCard k={t.results.champion} v={winner?.username ?? "—"} sub={t.results.points(winner?.score ?? 0)} />
+            <StatCard k={t.results.champion} v={isTie ? t.results.tieChampion : (winner?.username ?? "—")} sub={t.results.points(winner?.score ?? 0)} />
             <StatCard k={t.results.players} v={String(lb.length)} sub={t.results.inGame} />
             {mode === "conquest" ? (
               <>

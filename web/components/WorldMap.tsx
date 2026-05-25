@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ComposableMap,
   Geographies,
@@ -26,7 +26,15 @@ const MICRO_COORDS: Record<string, [number, number]> = {
   TV: [179.2, -8.52], TO: [-175.2, -21.18], WS: [-172.1, -13.76],
   AG: [-61.8, 17.06], BB: [-59.54, 13.19], DM: [-61.37, 15.41], GD: [-61.68, 12.12],
   KN: [-62.73, 17.36], LC: [-60.98, 13.91], VC: [-61.2, 13.25], TT: [-61.22, 10.69], BN: [114.7, 4.5],
+  // Kosovo: the 50m topojson leaves its feature with `id: undefined` (see
+  // NAME_TO_ISO), so this is the locator-pin fallback if name resolution fails.
+  XK: [20.9, 42.6],
 };
+
+// The world-atlas 50m topojson tags several disputed territories with
+// `id: undefined` — and they all collide on that key. Kosovo is the only one
+// that is a playable country here, so we resolve its polygon by name instead.
+const NAME_TO_ISO: Record<string, string> = { Kosovo: "XK" };
 
 // Pavillon · Apple-soft map palette.
 const SEA = "#faf7f0";
@@ -121,23 +129,15 @@ export default function WorldMap({
   const lastConquest = useGameStore((s) => s.lastConquest);
   const { lang } = useT();
 
-  // Fetch + parse the topojson once; derive both the geographies and a
-  // per-country focus map (used to auto-zoom onto the mystery target).
+  // Fetch + parse the topojson once.
   const [geoData, setGeoData] = useState<any>(null);
-  const focusRef = useRef<Map<string, Focus>>(new Map());
   useEffect(() => {
     let cancelled = false;
     fetch(TOPO_URL)
       .then((r) => r.json())
       .then((topo) => {
         if (cancelled) return;
-        const fc: any = feature(topo, topo.objects.countries);
-        const m = new Map<string, Focus>();
-        for (const f of fc.features) {
-          m.set(String(f.id).padStart(3, "0"), focusFromGeometry(f.geometry));
-        }
-        focusRef.current = m;
-        setGeoData(fc);
+        setGeoData(feature(topo, topo.objects.countries));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -149,11 +149,30 @@ export default function WorldMap({
     return m;
   }, [countries]);
 
-  const numericByIso = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const c of countries) m.set(c.isoCode, c.numericId);
+  // Resolve a topojson feature to our isoCode: by numeric id, falling back to a
+  // name match for features the topojson leaves id-less (Kosovo).
+  const isoForGeo = (geo: any): string | undefined => {
+    const meta = byNumeric.get(String(geo.id).padStart(3, "0"));
+    return meta?.isoCode ?? NAME_TO_ISO[geo?.properties?.name as string];
+  };
+
+  // isoCode -> framing focus (centre + zoom + extent), used to auto-zoom onto
+  // the mystery target and decide whether it needs a locator pin. Keyed by iso
+  // (not numeric id) so id-less features like Kosovo resolve, and on a duplicate
+  // id (e.g. Australia + Ashmore Is. both "036") the larger geometry wins.
+  const focusByIso = useMemo(() => {
+    const m = new Map<string, Focus>();
+    if (!geoData) return m;
+    for (const f of geoData.features) {
+      const iso = isoForGeo(f);
+      if (!iso) continue;
+      const focus = focusFromGeometry(f.geometry);
+      const existing = m.get(iso);
+      if (!existing || focus.span > existing.span) m.set(iso, focus);
+    }
     return m;
-  }, [countries]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoData, byNumeric]);
 
   // ISO -> player color
   const colorByIso = useMemo(() => {
@@ -179,22 +198,20 @@ export default function WorldMap({
   // Auto-zoom onto the highlighted (mystery) country, reset to world otherwise.
   const [view, setView] = useState<View>(DEFAULT_VIEW);
   useEffect(() => {
-    if (highlightIso && geoData) {
-      const nid = numericByIso.get(highlightIso);
-      const f = nid ? focusRef.current.get(nid) : undefined;
+    if (highlightIso) {
+      const f = focusByIso.get(highlightIso);
       if (f) { setView({ center: f.center, zoom: f.zoom }); return; }
       const micro = MICRO_COORDS[highlightIso];
       if (micro) { setView({ center: micro, zoom: 2.6 }); return; }
     }
     setView(DEFAULT_VIEW);
-  }, [highlightIso, geoData, numericByIso]);
+  }, [highlightIso, focusByIso]);
 
   const zoomedIn = view.zoom > 1.4;
 
   // Locator pin for the highlighted (mystery) country when it's tiny or missing
-  // from the topojson — so e.g. Vatican / Monaco / Nauru can still be found.
-  const hiNumeric = highlightIso ? numericByIso.get(highlightIso) : undefined;
-  const hiFocus = hiNumeric ? focusRef.current.get(hiNumeric) : undefined;
+  // from the topojson — so e.g. Vatican / Monaco / Nauru / Kosovo can still be found.
+  const hiFocus = highlightIso ? focusByIso.get(highlightIso) : undefined;
   const pinPos: [number, number] | null =
     hiFocus?.center ?? (highlightIso ? MICRO_COORDS[highlightIso] ?? null : null);
   const tinyCountry = hiFocus ? hiFocus.span < 2.5 : true; // absent → treat as tiny
@@ -229,9 +246,7 @@ export default function WorldMap({
             <Geographies geography={geoData}>
               {({ geographies }) =>
                 geographies.map((geo) => {
-                  const numericId = String(geo.id).padStart(3, "0");
-                  const meta = byNumeric.get(numericId);
-                  const iso = meta?.isoCode;
+                  const iso = isoForGeo(geo);
                   const conqueredColor = iso ? colorByIso.get(iso) : undefined;
                   const isHighlight = !!iso && !!highlightIso && iso === highlightIso;
                   const isGlow = !!iso && iso === glowIso;

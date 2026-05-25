@@ -126,6 +126,8 @@ const fr = {
     playerRules: (name: string) => `${name}`, // name styled separately; suffix below
     rulesSuffix: "domine la carte.",
     finished: "Partie terminée.",
+    tie: "Égalité",
+    tieChampion: "Ex æquo",
     champion: "Champion",
     rank: (n: number) => `${n}e`,
     playAgain: "Rejouer",
@@ -265,6 +267,8 @@ const en: typeof fr = {
     playerRules: (name: string) => `${name}`,
     rulesSuffix: "rules the map.",
     finished: "Game over.",
+    tie: "It's a tie",
+    tieChampion: "Tied",
     champion: "Champion",
     rank: (n: number) => ordinalEn(n),
     playAgain: "Play again",

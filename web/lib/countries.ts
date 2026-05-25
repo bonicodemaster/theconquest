@@ -171,8 +171,9 @@ export const COUNTRIES: Country[] = [
   { isoCode: "SA", numericId: "682", name: "Saudi Arabia", officialName: "Kingdom of Saudi Arabia", capital: "Riyadh", continent: "Asia", areaKm2: 2149690, aliases: ["saudi arabia", "arabie saoudite", "ksa"] },
   { isoCode: "SN", numericId: "686", name: "Senegal", officialName: "Republic of Senegal", capital: "Dakar", continent: "Africa", areaKm2: 196722, aliases: ["senegal", "sénégal"] },
   { isoCode: "RS", numericId: "688", name: "Serbia", officialName: "Republic of Serbia", capital: "Belgrade", continent: "Europe", areaKm2: 88361, aliases: ["serbia", "serbie", "srbija"] },
-  // Note: Kosovo has no ISO-3166 numeric code. The world-atlas topojson tags it as "-99"
-  // (Natural Earth sentinel for disputed/unassigned). Keeping that here so the map paints it.
+  // Kosovo has no ISO-3166 numeric code; the world-atlas 50m topojson actually
+  // leaves its feature with `id: undefined`, so the map resolves it by name
+  // (NAME_TO_ISO in WorldMap.tsx) rather than this placeholder numericId.
   { isoCode: "XK", numericId: "-99", name: "Kosovo", officialName: "Republic of Kosovo", capital: "Pristina", continent: "Europe", areaKm2: 10887, aliases: ["kosovo", "kosova", "republic of kosovo"] },
   { isoCode: "SC", numericId: "690", name: "Seychelles", officialName: "Republic of Seychelles", capital: "Victoria", continent: "Africa", areaKm2: 459, aliases: ["seychelles"] },
   { isoCode: "SL", numericId: "694", name: "Sierra Leone", officialName: "Republic of Sierra Leone", capital: "Freetown", continent: "Africa", areaKm2: 71740, aliases: ["sierra leone"] },

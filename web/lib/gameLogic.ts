@@ -39,6 +39,9 @@ export interface GameRow {
   mystery_winner_user_id: string | null;
   mystery_revealed_name: string | null;
   mystery_round_started_at: string | null;
+  // Per-round wrong-guess tally (migration 0004). Absent on rows read before
+  // the column existed — code treats `undefined` as "feature off".
+  round_misses?: { r: number; m: Record<string, number> } | null;
   updated_at: string;
 }
 
