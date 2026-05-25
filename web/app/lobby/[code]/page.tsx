@@ -62,9 +62,12 @@ export default function LobbyPage({ params }: { params: { code: string } }) {
     });
   }, [state]);
 
-  // Auto-route based on server status (covers missed broadcasts).
+  // Auto-route based on server status (covers missed broadcasts). Guard on the
+  // room code so a stale snapshot from a previous game (e.g. a finished game
+  // still in the store after you go home + create another) can't bounce us to
+  // its results screen — only THIS room's status should route us.
   useEffect(() => {
-    if (!state) return;
+    if (!state || state.code !== code.toUpperCase()) return;
     if (state.status === "playing") router.replace(`/game/${code}`);
     else if (state.status === "finished") router.replace(`/results/${code}`);
   }, [state, code, router]);

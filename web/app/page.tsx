@@ -13,6 +13,7 @@ export default function Home() {
   const { t, lang } = useT();
   const storeName = useGameStore((s) => s.username);
   const setStoreName = useGameStore((s) => s.setUsername);
+  const setGameState = useGameStore((s) => s.setState);
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -37,6 +38,7 @@ export default function Home() {
     const res = await api.createGame({ username: name, settings });
     setBusy(false);
     if (!res.ok) return setError(res.error);
+    setGameState(null); // drop any finished game still in the store so the new lobby starts clean
     router.push(`/lobby/${res.data.code}`);
   };
 
@@ -48,6 +50,7 @@ export default function Home() {
     const res = await api.joinGame(upper, { username: name });
     setBusy(false);
     if (!res.ok) return setError(res.error);
+    setGameState(null);
     router.push(`/lobby/${upper}`);
   };
 

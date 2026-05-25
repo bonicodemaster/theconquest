@@ -75,9 +75,10 @@ export default function GamePage({ params }: { params: { code: string } }) {
     if (!locked) inputRef.current?.focus();
   }, [state?.round?.index, state?.round?.revealedName, state?.settings.mode, wrongCount]);
 
-  // Auto-route based on server status (covers missed broadcasts).
+  // Auto-route based on server status (covers missed broadcasts). Guard on the
+  // room code so a stale snapshot from another game can't route us out of this one.
   useEffect(() => {
-    if (!state) return;
+    if (!state || state.code !== code.toUpperCase()) return;
     if (state.status === "lobby") router.replace(`/lobby/${code}`);
     else if (state.status === "finished") router.replace(`/results/${code}`);
   }, [state, code, router]);
