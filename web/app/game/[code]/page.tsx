@@ -36,6 +36,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
   const leaderboard = useGameStore((s) => s.leaderboard);
   const lastConquest = useGameStore((s) => s.lastConquest);
   const feed = useGameStore((s) => s.conquestFeed);
+  const serverOffset = useGameStore((s) => s.serverOffset);
 
   const [countries, setCountries] = useState<CountryMeta[]>([]);
   const [value, setValue] = useState("");
@@ -98,8 +99,9 @@ export default function GamePage({ params }: { params: { code: string } }) {
     const endsAt = mode === "conquest" ? state.endsAt : state.round?.endsAt;
     if (!endsAt) return;
     const tryAdvance = () => {
-      if (Date.now() < endsAt) return;                     // deadline not reached yet
-      if (Date.now() - lastAdvance.current < 1500) return; // throttle (also covers retries)
+      // Compare against server time so a skewed clock doesn't fire late/early.
+      if (Date.now() + useGameStore.getState().serverOffset < endsAt) return; // deadline not reached yet
+      if (Date.now() - lastAdvance.current < 1500) return;                    // throttle (also covers retries)
       lastAdvance.current = Date.now();
       void api.advance(code);
     };
@@ -165,7 +167,9 @@ export default function GamePage({ params }: { params: { code: string } }) {
   const total = countries.length || 196;
 
   const endsAt = isConquest ? state.endsAt : state.round?.endsAt;
-  const remaining = endsAt ? endsAt - now : 0;
+  // Count down against server time (now + offset), so a skewed device clock
+  // doesn't distort the timer.
+  const remaining = endsAt ? endsAt - (now + serverOffset) : 0;
   const danger = remaining > 0 && remaining < 30_000;
   const revealPhase = roundBased && !!state.round?.revealedName;
   const outOfTries = roundBased && wrongCount >= MAX_WRONG_MYSTERY;

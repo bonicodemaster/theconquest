@@ -10,5 +10,8 @@ export async function GET(_req: Request, ctx: { params: { code: string } }) {
   return ok({
     state: publicState(got.game, got.players, got.conquests),
     leaderboard: leaderboardFrom(got.players, got.conquests, got.game.mode),
+    // Server clock at response time. The client derives (server − client) offset
+    // from this so the countdown uses server time, not the device clock.
+    serverNow: Date.now(),
   });
 }

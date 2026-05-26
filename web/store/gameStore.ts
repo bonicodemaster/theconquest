@@ -23,6 +23,12 @@ interface GameStore {
   remainingMs: number;
   setRemaining: (n: number) => void;
 
+  /** Estimated (server clock − client clock) in ms, refreshed by the state poll.
+   *  The countdown runs against server time so a skewed device clock can't
+   *  distort timers (a friend's clock 20s behind showed 10s rounds as 30s). */
+  serverOffset: number;
+  setServerOffset: (ms: number) => void;
+
   /** Most recent conquest — drives the map glow + capture flash. */
   lastConquest: ConquestEvent | null;
   setLastConquest: (c: ConquestEvent | null) => void;
@@ -89,6 +95,9 @@ export const useGameStore = create<GameStore>((set) => ({
 
   remainingMs: 0,
   setRemaining: (n) => set({ remainingMs: n }),
+
+  serverOffset: 0,
+  setServerOffset: (ms) => set({ serverOffset: ms }),
 
   lastConquest: null,
   setLastConquest: (c) => set({ lastConquest: c }),

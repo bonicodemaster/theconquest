@@ -27,6 +27,16 @@ export function useGameRealtime(code?: string) {
     const refetch = () => {
       api.getState(code).then((r) => {
         if (cancelled || !r.ok) return;
+        // Sync to server time: derive (server − client) clock offset so the
+        // countdown uses server time, not the device clock (a friend's clock 20s
+        // behind showed 10s rounds as 30s). Only adopt meaningful drift (>750ms)
+        // so request-latency jitter can't wobble the displayed timer.
+        const sn = (r.data as { serverNow?: number }).serverNow;
+        if (typeof sn === "number") {
+          const off = sn - Date.now();
+          const store = useGameStore.getState();
+          if (Math.abs(off - store.serverOffset) > 750) store.setServerOffset(off);
+        }
         // Drop stale reads (replica lag / cached GET): if this read is an older
         // version of the same room than what we already hold, ignore it
         // entirely — state AND leaderboard — so it can't revert settings or
