@@ -43,7 +43,7 @@ export default function GamePage({ params }: { params: { code: string } }) {
   const [now, setNow] = useState(() => Date.now());
   const inputRef = useRef<HTMLInputElement>(null);
   const footerRef = useRef<HTMLElement>(null);
-  const advancedFor = useRef<string | null>(null);
+  const lastAdvance = useRef(0);
 
   useEffect(() => {
     fetch("/api/countries").then((r) => r.json()).then(setCountries).catch(() => {});
@@ -83,23 +83,29 @@ export default function GamePage({ params }: { params: { code: string } }) {
     else if (state.status === "finished") router.replace(`/results/${code}`);
   }, [state, code, router]);
 
-  // Client-driven timer transition: when the round/game ends, ask the server to advance.
+  // Client-driven timer transition: once the deadline passes, ask the server to
+  // advance — and KEEP asking (throttled) until the round/game actually moves on.
+  // A solo player is the only client that can drive this, so a single dropped or
+  // timed-out advance call (cold start / transient blip on serverless) must not
+  // strand them on the reveal forever — the old one-shot did exactly that. The
+  // advance endpoint is idempotent (race-safe conditional UPDATEs), so retrying
+  // is safe and redundant calls from multiple clients just no-op. A new round
+  // ships a fresh endsAt in the future, which stops the retries via the early
+  // return below.
   useEffect(() => {
     if (!state) return;
     const mode = state.settings.mode;
     const endsAt = mode === "conquest" ? state.endsAt : state.round?.endsAt;
     if (!endsAt) return;
-    const key = `${mode}:${state.round?.index ?? "g"}:${endsAt}`;
-    const delay = endsAt - Date.now();
-    const fire = () => {
-      if (advancedFor.current !== key) {
-        advancedFor.current = key;
-        void api.advance(code);
-      }
+    const tryAdvance = () => {
+      if (Date.now() < endsAt) return;                     // deadline not reached yet
+      if (Date.now() - lastAdvance.current < 1500) return; // throttle (also covers retries)
+      lastAdvance.current = Date.now();
+      void api.advance(code);
     };
-    if (delay <= 0) { fire(); return; }
-    const t = setTimeout(fire, delay + 150);
-    return () => clearTimeout(t);
+    tryAdvance(); // handle a deadline that already elapsed before this run
+    const id = setInterval(tryAdvance, 500);
+    return () => clearInterval(id);
   }, [state, code]);
 
   const byIso = useMemo(() => {
