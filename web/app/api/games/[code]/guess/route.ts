@@ -34,17 +34,42 @@ async function recordMissMaybeReveal(
   players: PlayerRow[],
   userId: string
 ): Promise<void> {
-  if (game.round_misses === undefined) return; // column not migrated yet
-  const prev = game.round_misses && game.round_misses.r === game.round_index ? game.round_misses.m : {};
-  const counts: Record<string, number> = { ...prev, [userId]: (prev[userId] ?? 0) + 1 };
-  await admin
-    .from("games")
-    .update({ round_misses: { r: game.round_index, m: counts } })
-    .eq("id", game.id)
-    .eq("round_index", game.round_index);
+  // Atomic increment via compare-and-swap. PostgREST can't express
+  // `m[user] = m[user] + 1` in a single statement, so a naive read-modify-write
+  // loses updates when two guesses land at once (the box clears instantly, so a
+  // fast solo player — or two players in a room — easily fire concurrently):
+  // both read the same tally and the second write clobbers the first. We'd then
+  // undercount, `everyoneDone` would never flip, and the round would run out the
+  // clock instead of ending early. So: re-read the row's tally + `updated_at`,
+  // then write guarded on that `updated_at` (the trigger bumps it on every
+  // write). If a concurrent guess changed the row first, the guard no-ops and we
+  // retry with the fresh value.
+  let counts: Record<string, number> | null = null;
+  for (let attempt = 0; attempt < 8 && counts === null; attempt++) {
+    const { data: g } = await admin
+      .from("games")
+      .select("round_index, round_misses, updated_at, mystery_winner_user_id, mystery_revealed_name")
+      .eq("id", game.id)
+      .maybeSingle();
+    if (!g || g.round_misses === undefined) return; // gone, or column not migrated
+    if (g.round_index !== game.round_index) return; // round already moved on
+    if (g.mystery_winner_user_id || g.mystery_revealed_name) return; // already settled
+    const prev = g.round_misses && g.round_misses.r === g.round_index ? g.round_misses.m : {};
+    const next: Record<string, number> = { ...prev, [userId]: (prev[userId] ?? 0) + 1 };
+    const { data: ok } = await admin
+      .from("games")
+      .update({ round_misses: { r: g.round_index, m: next } })
+      .eq("id", game.id)
+      .eq("round_index", g.round_index)
+      .eq("updated_at", g.updated_at) // optimistic lock — only if unchanged since the read
+      .select("id")
+      .maybeSingle();
+    if (ok) counts = next; // else: lost the CAS race → retry with fresh state
+  }
+  if (!counts) return; // couldn't record (heavy contention / round moved) — the timer still ends it
 
   const everyoneDone =
-    players.length > 0 && players.every((pl) => (counts[pl.user_id] ?? 0) >= MAX_WRONG_GUESSES);
+    players.length > 0 && players.every((pl) => (counts![pl.user_id] ?? 0) >= MAX_WRONG_GUESSES);
   if (!everyoneDone) return;
 
   const iso = game.mystery_iso;
